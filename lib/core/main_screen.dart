@@ -1,6 +1,7 @@
 // lib/core/main_screen.dart
 
 import 'package:flutter/material.dart';
+import 'package:hemelvaartbingo/features/settings/settings_screen.dart';
 import '../features/card/presentation/pages/card_page.dart';
 import '../shared/widgets/main_navigation.dart';
 
@@ -18,7 +19,7 @@ class _MainScreenState extends State<MainScreen> {
     Center(child: Text("Profile Page")),
     CardPage(),
     Center(child: Text("Leaderboard Page")),
-    Center(child: Text("Settings Page")),
+    SettingsScreen(),
   ];
 
   @override

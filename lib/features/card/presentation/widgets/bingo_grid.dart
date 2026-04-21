@@ -1,50 +1,43 @@
 // lib/features/card/presentation/widgets/bingo_grid.dart
 
 import 'package:flutter/material.dart';
-import 'bingo_cell.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'dart:math';
+import '../../../match/providers/match_provider.dart';
+import '../../models/card_model.dart';
+import 'bingo_cell_widget.dart';
 
-class BingoGrid extends StatefulWidget {
-  final List<int> numbers;
-  final int gridSize;
+class BingoGrid extends ConsumerWidget {
+  final List<CellModel> cells;
 
   const BingoGrid({
     super.key,
-    required this.numbers,
-    required this.gridSize,
+    required this.cells,
   });
 
   @override
-  State<BingoGrid> createState() => _BingoGridState();
-}
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Calculate grid size based on cell count (e.g., 25 cells = 5x5)
+    final gridSize = sqrt(cells.length).toInt();
 
-class _BingoGridState extends State<BingoGrid> {
-  final Set<int> selectedNumbers = {};
-
-  @override
-  Widget build(BuildContext context) {
     return GridView.builder(
       padding: const EdgeInsets.all(12),
       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: widget.gridSize,
+        crossAxisCount: gridSize,
         crossAxisSpacing: 8,
         mainAxisSpacing: 8,
       ),
-      itemCount: widget.numbers.length,
+      itemCount: cells.length,
       itemBuilder: (context, index) {
-        final number = widget.numbers[index];
-        final isSelected = selectedNumbers.contains(number);
+        // Sort cells by position if the backend doesn't guarantee order
+        final sortedCells = [...cells]..sort((a, b) => a.position.compareTo(b.position));
+        final cell = sortedCells[index];
 
-        return BingoCell(
-          number: number,
-          isSelected: isSelected,
+        return BingoCellWidget(
+          cell: cell,
           onTap: () {
-            setState(() {
-              if (isSelected) {
-                selectedNumbers.remove(number);
-              } else {
-                selectedNumbers.add(number);
-              }
-            });
+            // Use the notifier to send the update to NestJS
+            ref.read(currentMatchProvider.notifier).toggleCellCheck(cell.id);
           },
         );
       },
