@@ -37,7 +37,7 @@ class BingoGrid extends ConsumerWidget {
           cell: cell,
           onTap: () {
             // Use the notifier to send the update to NestJS
-            ref.read(currentMatchProvider.notifier).toggleCellCheck(cell.id);
+            ref.read(currentMatchProvider.notifier).toggleCellCheck(cell.id, !cell.isChecked);
           },
         );
       },
