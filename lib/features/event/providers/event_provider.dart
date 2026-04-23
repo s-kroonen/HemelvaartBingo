@@ -1,27 +1,36 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:hemelvaartbingo/features/event/data/event_service.dart';
+
 import '../../../core/network/api_client_provider.dart';
+import '../../match/providers/match_provider.dart';
 import '../data/event_model.dart';
+import '../data/event_service.dart';
 
-final eventServiceProvider = Provider((ref) => EventService(ref.watch(dioProvider)));
-
-final eventProvider = AsyncNotifierProvider<EventNotifier, List<EventModel>>(
+final eventServiceProvider = Provider<EventService>((ref) {
+  final dio = ref.read(dioProvider);
+  return EventService(dio);
+});
+final eventProvider =
+AsyncNotifierProvider<EventNotifier, List<EventModel>>(
   EventNotifier.new,
 );
-
 class EventNotifier extends AsyncNotifier<List<EventModel>> {
   late String matchId;
 
   @override
-  Future<List<EventModel>> build(String arg) async {
-    matchId = arg;
-    final service = ref.read(eventServiceProvider);
-    return service.getEvents(matchId);
+  Future<List<EventModel>> build() async {
+    // 👇 get match from your existing provider
+    final matchContext = await ref.watch(currentMatchProvider.future);
+
+    matchId = matchContext.match.id;
+
+    return ref.read(eventServiceProvider).getEvents(matchId);
   }
 
   Future<void> refresh() async {
     state = const AsyncLoading();
-    state = await AsyncValue.guard(() => ref.read(eventServiceProvider).getEvents(matchId));
+    state = await AsyncValue.guard(
+          () => ref.read(eventServiceProvider).getEvents(matchId),
+    );
   }
 
   Future<void> createEvent(Map<String, dynamic> data) async {

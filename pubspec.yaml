@@ -42,7 +42,14 @@ dependencies:
   shared_preferences: ^2.5.5
   flutter_secure_storage: ^10.0.0
 
+flutter_icons:
+  android: true
+  ios: true
+  web:
+    generate: true
+  image_path: "assets/icon-512-maskable.png"
 dev_dependencies:
+  flutter_launcher_icons: ^0.13.1
   flutter_test:
     sdk: flutter
 
