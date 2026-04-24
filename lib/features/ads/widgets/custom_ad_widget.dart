@@ -4,7 +4,7 @@ import 'dart:ui';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
-import '../models/ad_model.dart';
+import '../data/ad_model.dart';
 
 class CustomAdWidget extends StatefulWidget {
   final AdModel ad;
