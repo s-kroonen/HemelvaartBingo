@@ -26,4 +26,8 @@ class UserService {
     );
     return CardModel.fromJson(res.data);
   }
+
+  Future<void> deleteAccount() async {
+
+  }
 }
