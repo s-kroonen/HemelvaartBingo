@@ -1,0 +1,51 @@
+name: Build & Deploy Flutter Web
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-main
+  cancel-in-progress: true
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # ✅ Install Flutter (cached = fast after first run)
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      # ✅ Build check (THIS is the important part)
+      - name: Build Flutter Web (validation)
+        run: flutter build web --release --dart-define=API_BASE_URL=https://dummy.url
+
+      # 🚀 Only runs if build succeeded
+      - name: Trigger Portainer Webhook
+        run: curl -X POST "${{ secrets.PORTAINER_WEBHOOK_URL }}"
+
+      - name: Wait for deployment
+        run: sleep 30
+
+      - name: Healthcheck
+        run: |
+          for i in {1..5}; do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" "${{ secrets.DEPLOY_HEALTHCHECK_URL }}")
+            if [ "$STATUS" = "200" ]; then
+              echo "✅ Service is healthy"
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "❌ Service failed health check"
+          exit 1

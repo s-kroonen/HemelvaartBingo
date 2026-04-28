@@ -49,3 +49,4 @@ android/app/upload-keystore.jks
 
 # Local config
 android/local.properties
+/.env

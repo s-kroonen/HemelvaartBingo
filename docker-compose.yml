@@ -1,0 +1,8 @@
+services:
+  webapp:
+    build:
+      context: .
+      args:
+        API_BASE_URL: ${API_BASE_URL}
+    ports:
+      - "${PORT:-8080}:80"
