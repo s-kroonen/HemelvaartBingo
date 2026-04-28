@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:hemelvaartbingo/features/settings/settings_screen.dart';
 import '../features/card/presentation/pages/card_page.dart';
+import '../features/user/presentation/profile_screen.dart';
 import '../shared/widgets/main_navigation.dart';
 
 class MainScreen extends StatefulWidget {
@@ -16,7 +17,7 @@ class _MainScreenState extends State<MainScreen> {
   int currentIndex = 1;
 
   final pages = const [
-    Center(child: Text("Profile Page")),
+    ProfileScreen(),
     CardPage(),
     Center(child: Text("Leaderboard Page")),
     SettingsScreen(),

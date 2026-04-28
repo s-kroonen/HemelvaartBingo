@@ -24,10 +24,10 @@ class ProfileScreen extends ConsumerWidget {
                 children: [
                   const CircleAvatar(radius: 50, child: Icon(Icons.person, size: 50)),
                   Text(user.username, style: Theme.of(context).textTheme.headlineMedium),
-                  _buildScoreCard(user.score),
+                  _buildScoreCard(user.score ?? 0),
                   const Divider(),
                   const Text("🏆 Trophy Room", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                  _buildAwardsGrid(user.awards),
+                  _buildAwardsGrid(user.awards?? []),
                   const SizedBox(height: 20),
                   TextButton.icon(
                     onPressed: () => _showDeleteDialog(context, ref),

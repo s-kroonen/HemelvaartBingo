@@ -11,15 +11,7 @@ import 'package:hemelvaartbingo/shared/theme.dart';
 import 'core/router.dart';
 import 'firebase_options.dart';
 
-const bool kIsDemoMode = bool.fromEnvironment('DEMO_MODE');
-
 void main() async {
-  assert(() {
-    if (kIsDemoMode) {
-      debugPrint("⚠️ DEMO MODE ENABLED");
-    }
-    return true;
-  }());
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   runApp(const ProviderScope(child: MyApp()));

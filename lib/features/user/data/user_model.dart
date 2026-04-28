@@ -6,8 +6,8 @@ class UserModel {
   final String username;
   final List<String> roles;
   final String? currentMatchID;
-  final int score;
-  final List<AwardModel> awards;
+  final int? score;
+  final List<AwardModel>? awards;
 
   UserModel({
     required this.id,
