@@ -9,35 +9,42 @@ import 'main_screen.dart';
 
 import 'dart:async';
 import 'package:flutter/foundation.dart';
+// lib/core/router.dart
+
 final routerProvider = Provider<GoRouter>((ref) {
   final notifier = ValueNotifier(0);
-
-  // Rebuild router when auth changes
-  ref.listen(authStateProvider, (_, __) {
-    notifier.value++;
-  });
+  ref.listen(authStateProvider, (_, __) => notifier.value++);
 
   return GoRouter(
     initialLocation: '/',
     refreshListenable: notifier,
-
     redirect: (context, state) {
       final authAsync = ref.read(authStateProvider);
 
       return authAsync.when(
         data: (auth) {
           final isLoggedIn = auth.isLoggedIn;
+          // Are we currently on the login page?
           final isLoggingIn = state.matchedLocation == '/login';
 
-          if (!isLoggedIn && !isLoggingIn) return '/login';
-          if (isLoggedIn && isLoggingIn) return '/';
+          if (!isLoggedIn) {
+            // Not logged in? Go to login, but keep the current location in a query param
+            // so we can return here after login.
+            return isLoggingIn ? null : '/login?from=${state.uri.toString()}';
+          }
+
+          // If logged in and on login page, go to the intended destination or home
+          if (isLoggingIn) {
+            final from = state.uri.queryParameters['from'] ?? '/';
+            return from;
+          }
+
           return null;
         },
-        loading: () => null, // don’t redirect while loading
+        loading: () => null,
         error: (_, __) => '/login',
       );
     },
-
     routes: [
       GoRoute(
         path: '/',
@@ -50,7 +57,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/join/:token',
         builder: (context, state) {
-          final token = state.pathParameters['token']!;
+          final token = state.pathParameters['token'] ?? "";
           return JoinMatchScreen(token: token);
         },
       ),

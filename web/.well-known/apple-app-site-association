@@ -1,0 +1,9 @@
+{
+  "applinks": {
+    "apps": [],
+    "details": [{
+      "appID": "YOUR_TEAM_ID.com.yourcompany.hemelvaartbingo",
+      "paths": ["/join/*"]
+    }]
+  }
+}
