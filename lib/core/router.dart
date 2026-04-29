@@ -11,6 +11,8 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 // lib/core/router.dart
 
+// lib/core/router.dart
+
 final routerProvider = Provider<GoRouter>((ref) {
   final notifier = ValueNotifier(0);
   ref.listen(authStateProvider, (_, __) => notifier.value++);
@@ -24,19 +26,18 @@ final routerProvider = Provider<GoRouter>((ref) {
       return authAsync.when(
         data: (auth) {
           final isLoggedIn = auth.isLoggedIn;
-          // Are we currently on the login page?
           final isLoggingIn = state.matchedLocation == '/login';
 
           if (!isLoggedIn) {
-            // Not logged in? Go to login, but keep the current location in a query param
-            // so we can return here after login.
-            return isLoggingIn ? null : '/login?from=${state.uri.toString()}';
+            // Encode the full URI so we don't lose tokens or query params
+            final from = state.uri.toString();
+            return isLoggingIn ? null : '/login?from=${Uri.encodeComponent(from)}';
           }
 
-          // If logged in and on login page, go to the intended destination or home
-          if (isLoggingIn) {
-            final from = state.uri.queryParameters['from'] ?? '/';
-            return from;
+          if (isLoggedIn && isLoggingIn) {
+            // Decode and go back to intended page, or home
+            final from = state.uri.queryParameters['from'];
+            return from != null ? Uri.decodeComponent(from) : '/';
           }
 
           return null;

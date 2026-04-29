@@ -19,6 +19,7 @@ class JoinMatchScreen extends ConsumerStatefulWidget {
 
 class _JoinMatchScreenState extends ConsumerState<JoinMatchScreen> {
   bool adCompleted = false;
+  bool isJoining = false;
 
   @override
   Widget build(BuildContext context) {
@@ -50,21 +51,26 @@ class _JoinMatchScreenState extends ConsumerState<JoinMatchScreen> {
                     onComplete: () => setState(() => adCompleted = true),
                   )
                 else
-                  ElevatedButton(
-                    onPressed: () async {
-                      await ref
-                          .read(inviteServiceProvider)
-                          .joinMatch(widget.token);
-                      // Clear token and navigate home
-                      ref.read(pendingInviteTokenProvider.notifier).state =
-                          null;
-                    },
-                    child: const Text("Join Now"),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                      ),
+                      onPressed: isJoining ? null : _handleJoin,
+                      child: isJoining
+                          ? const CircularProgressIndicator(color: Colors.white)
+                          : const Text(
+                              "Accept Invite & Join Now",
+                              style: TextStyle(fontSize: 18),
+                            ),
+                    ),
                   ),
               ],
             ),
           );
         },
+
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (err, stack) {
           // 1. Log to console for the developer
@@ -121,5 +127,30 @@ class _JoinMatchScreenState extends ConsumerState<JoinMatchScreen> {
         },
       ),
     );
+  }
+  Future<void> _handleJoin() async {
+    setState(() => isJoining = true);
+    try {
+      await ref.read(inviteServiceProvider).joinMatch(widget.token);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Successfully joined the match!")),
+        );
+        ref.read(pendingInviteTokenProvider.notifier).state = null;
+        context.go('/'); // Redirect home
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Failed to join: $e"),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => isJoining = false);
+    }
   }
 }

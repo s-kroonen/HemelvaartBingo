@@ -3,6 +3,7 @@ import 'dart:async';
 
 import 'package:app_links/app_links.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_web_plugins/flutter_web_plugins.dart';
@@ -20,6 +21,7 @@ void main() async {
 
 class MyApp extends ConsumerStatefulWidget {
   const MyApp({super.key});
+
   @override
   ConsumerState<MyApp> createState() => _MyAppState();
 }
@@ -35,6 +37,7 @@ class _MyAppState extends ConsumerState<MyApp> {
   }
 
   void _initDeepLinks() {
+    if (kIsWeb) return;
     _appLinks = AppLinks();
     // Handle links when app is running in background/foreground
     _linkSubscription = _appLinks.uriLinkStream.listen((uri) {
@@ -46,7 +49,7 @@ class _MyAppState extends ConsumerState<MyApp> {
     final router = ref.read(routerProvider);
     if (uri.path.startsWith('/join/')) {
       final token = uri.pathSegments.last;
-      router.push('/join/$token');
+      router.go('/join/$token');
     }
   }
 
