@@ -27,7 +27,9 @@ class UserService {
     return CardModel.fromJson(res.data);
   }
 
-  Future<void> deleteAccount() async {
+  Future<void> deleteAccount() async {}
 
+  Future<void> updateProfile(Map<String, dynamic> map) async {
+    await _dio.put("/users/me", data: map);
   }
 }

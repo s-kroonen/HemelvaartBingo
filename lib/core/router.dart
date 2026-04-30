@@ -1,8 +1,10 @@
 // lib/core/router.dart
 
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../features/auth/presentation/pages/login_page.dart';
+import '../features/auth/presentation/pages/register_page.dart';
 import '../features/auth/providers/authState_provider.dart';
 import '../features/invites/presentation/join_match_screen.dart';
 import 'main_screen.dart';
@@ -21,39 +23,30 @@ final routerProvider = Provider<GoRouter>((ref) {
     initialLocation: '/',
     refreshListenable: notifier,
     redirect: (context, state) {
-      final authAsync = ref.read(authStateProvider);
+      final isLoggedIn = FirebaseAuth.instance.currentUser != null;
+      // Check if they are on EITHER login or register
+      final isAuthPath =
+          state.matchedLocation == '/login' ||
+          state.matchedLocation == '/register';
 
-      return authAsync.when(
-        data: (auth) {
-          final isLoggedIn = auth.isLoggedIn;
-          final isLoggingIn = state.matchedLocation == '/login';
+      if (!isLoggedIn && !isAuthPath) {
+        final from = state.uri.toString();
+        return '/login?from=${Uri.encodeComponent(from)}';
+      }
 
-          if (!isLoggedIn) {
-            // Encode the full URI so we don't lose tokens or query params
-            final from = state.uri.toString();
-            return isLoggingIn ? null : '/login?from=${Uri.encodeComponent(from)}';
-          }
+      if (isLoggedIn && isAuthPath) {
+        final from = state.uri.queryParameters['from'];
+        return from != null ? Uri.decodeComponent(from) : '/';
+      }
 
-          if (isLoggedIn && isLoggingIn) {
-            // Decode and go back to intended page, or home
-            final from = state.uri.queryParameters['from'];
-            return from != null ? Uri.decodeComponent(from) : '/';
-          }
-
-          return null;
-        },
-        loading: () => null,
-        error: (_, __) => '/login',
-      );
+      return null;
     },
     routes: [
+      GoRoute(path: '/', builder: (context, state) => const MainScreen()),
+      GoRoute(path: '/login', builder: (context, state) => const LoginPage()),
       GoRoute(
-        path: '/',
-        builder: (context, state) => const MainScreen(),
-      ),
-      GoRoute(
-        path: '/login',
-        builder: (context, state) => const LoginPage(),
+        path: '/register',
+        builder: (context, state) => const RegisterPage(),
       ),
       GoRoute(
         path: '/join/:token',
@@ -65,13 +58,16 @@ final routerProvider = Provider<GoRouter>((ref) {
     ],
   );
 });
+
 // Helper class to convert Stream to Listenable
 class GoRouterRefreshStream extends ChangeNotifier {
   late final StreamSubscription<dynamic> _subscription;
+
   GoRouterRefreshStream(Stream<dynamic> stream) {
     notifyListeners();
     _subscription = stream.asBroadcastStream().listen((_) => notifyListeners());
   }
+
   @override
   void dispose() {
     _subscription.cancel();

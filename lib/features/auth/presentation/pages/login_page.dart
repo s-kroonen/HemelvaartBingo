@@ -2,6 +2,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:go_router/go_router.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -56,6 +57,8 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   Widget build(BuildContext context) {
+    final from = GoRouterState.of(context).uri.queryParameters['from'];
+    final registerUrl = from != null ? '/register?from=${Uri.encodeComponent(from)}' : '/register';
     return Scaffold(
       appBar: AppBar(title: const Text("Login")),
       body: Padding(
@@ -76,8 +79,8 @@ class _LoginPageState extends State<LoginPage> {
             ),
 
             TextButton(
-              onPressed: isLoading ? null : register,
-              child: const Text("Register"),
+              onPressed: () => context.go(registerUrl),
+              child: const Text("Don't have an account? Register"),
             ),
           ],
         ),

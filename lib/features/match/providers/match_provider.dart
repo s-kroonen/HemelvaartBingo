@@ -76,3 +76,8 @@ final allMatchesProvider = FutureProvider<List<MatchModel>>((ref) async {
   final service = ref.watch(matchServiceProvider);
   return service.fetchMyMatches();
 });
+
+final currentMatchIdProvider = Provider<String?>((ref) {
+  final matchAsync = ref.watch(currentMatchProvider);
+  return matchAsync.value?.match.id;
+});
