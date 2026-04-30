@@ -58,6 +58,11 @@ class DemoUserProvider extends AsyncNotifier<UserModel> {
       username: 'Demo User',
       roles: ["user"],
       awards: [],
+      settings: UserSettings(
+        emailNotifications: true,
+        newsletter: false,
+        testerProgram: false,
+      ),
       // add required fields here
     );
   }
@@ -105,8 +110,6 @@ void main() {
         platformName = "web";
       }
 
-
-
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
@@ -132,6 +135,11 @@ void main() {
                 email: '',
                 roles: [],
                 awards: [],
+                settings: UserSettings(
+                  emailNotifications: true,
+                  newsletter: false,
+                  testerProgram: false,
+                ),
               );
             }),
 
