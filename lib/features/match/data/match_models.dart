@@ -6,6 +6,11 @@ class MatchModel {
   final int cardSize;
   final String status;
   final List<int> calledNumbers;
+  final String roleInMatch;
+  final DateTime? startDate;
+  final DateTime? endDate;
+  final int? numbersPerEvent;
+  final bool? autoNumberDistribution;
 
   MatchModel({
     required this.id,
@@ -13,6 +18,11 @@ class MatchModel {
     required this.cardSize,
     required this.status,
     required this.calledNumbers,
+    required this.roleInMatch,
+    required this.startDate,
+    required this.endDate,
+    required this.numbersPerEvent,
+    required this.autoNumberDistribution,
   });
 
   factory MatchModel.fromJson(Map<String, dynamic>? json) {
@@ -24,11 +34,15 @@ class MatchModel {
         cardSize: 0,
         status: 'unknown',
         calledNumbers: [],
+        roleInMatch: 'player',
+        startDate: null,
+        endDate: null,
+        numbersPerEvent: 1,
+        autoNumberDistribution: false,
       );
     }
 
     return MatchModel(
-      // Use .toString() and ?? to prevent the _asString error
       id: json['id']?.toString() ?? '',
       name: json['name']?.toString() ?? 'Unnamed Match',
       cardSize: json['cardSize'] is int ? json['cardSize'] : 0,
@@ -39,6 +53,19 @@ class MatchModel {
               ?.map((e) => int.tryParse(e.toString()) ?? 0)
               .toList() ??
           [],
+      roleInMatch: json['roleInMatch']?.toString() ?? 'master',
+      startDate: DateTime.parse(
+        json['startDate']?.toString() ?? DateTime.january.toString(),
+      ),
+      endDate: DateTime.parse(
+        json['endDate']?.toString() ?? DateTime.january.toString(),
+      ),
+      numbersPerEvent: json['numbersPerEvent'] is int
+          ? json['numbersPerEvent']
+          : 1,
+      autoNumberDistribution: json['autoNumberDistribution'] is bool
+          ? json['autoNumberDistribution']
+          : false,
     );
   }
 }

@@ -41,7 +41,7 @@ class CurrentCardNotifier extends AsyncNotifier<CardModel> {
       // 🔥 Call backend
 
       final updatedCard = await ref
-          .read(userServiceProvider)
+          .read(cardServiceProvider)
           .updateCellState(cellId, isChecked);
 
       // Replace with real backend state (source of truth)

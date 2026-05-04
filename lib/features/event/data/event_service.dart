@@ -8,29 +8,29 @@ class EventService {
   EventService(this._dio);
 
   Future<List<EventModel>> getEvents(String matchId) async {
-    final res = await _dio.get('/master/matches/$matchId/events');
+    final res = await _dio.get('/matches/$matchId/events');
     return (res.data as List)
         .map((e) => EventModel.fromJson(e))
         .toList();
   }
 
   Future<void> createEvent(String matchId, Map<String, dynamic> data) async {
-    await _dio.post('/master/matches/$matchId/events', data: data);
+    await _dio.post('/matches/$matchId/events', data: data);
   }
 
   Future<void> updateEvent(String matchId, String eventId, Map<String, dynamic> data) async {
-    await _dio.put('/master/matches/$matchId/events/$eventId', data: data);
+    await _dio.put('/matches/$matchId/events/$eventId', data: data);
   }
 
   Future<void> deleteEvent(String matchId, String eventId) async {
-    await _dio.delete('/master/matches/$matchId/events/$eventId');
+    await _dio.delete('/matches/$matchId/events/$eventId');
   }
 
   Future<void> callEvent(String matchId, String eventId) async {
-    await _dio.post('/master/matches/$matchId/events/$eventId/call');
+    await _dio.post('/matches/$matchId/events/$eventId/call');
   }
 
   Future<void> recallEvent(String matchId, String eventId) async {
-    await _dio.post('/master/matches/$matchId/events/$eventId/recall');
+    await _dio.post('/matches/$matchId/events/$eventId/recall');
   }
 }

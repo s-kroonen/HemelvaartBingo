@@ -39,7 +39,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 children: [
                   CheckboxListTile(
                     title: const Text("Email Notifications"),
-                    value: user.settings.emailNotifications, // Use data from backend
+                    value: user.settings.emailNotifications,
+                    // Use data from backend
                     onChanged: (val) =>
                         _updateUserField('emailNotifications', val),
                   ),
@@ -118,41 +119,63 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     .where((m) => m.name.toLowerCase().contains(query))
                     .toList();
                 return Column(
-                  children: filtered.map((match) {
-                    final isActive = match.id == currentMatchId;
-                    return Card(
-                      color: isActive
-                          ? Theme.of(context).primaryColor.withOpacity(0.1)
-                          : null,
-                      shape: isActive
-                          ? RoundedRectangleBorder(
-                              side: BorderSide(
-                                color: Theme.of(context).primaryColor,
-                                width: 2,
-                              ),
-                              borderRadius: BorderRadius.circular(8),
-                            )
-                          : null,
-                      child: ListTile(
-                        title: Text(
-                          match.name,
-                          style: TextStyle(
-                            fontWeight: isActive
-                                ? FontWeight.bold
-                                : FontWeight.normal,
-                          ),
-                        ),
-                        subtitle: Text("Status: ${match.status}"),
-                        trailing: isActive
-                            ? const Icon(
-                                Icons.check_circle,
-                                color: Colors.green,
+                  children: [
+                    ElevatedButton.icon(
+                      onPressed: () => _showMatchDialog(),
+                      icon: const Icon(Icons.add),
+                      label: const Text("Create or Join Match"),
+                    ),
+                    const SizedBox(height: 10),
+                    ...filtered.map((match) {
+                      final isActive = match.id == currentMatchId;
+                      final isMaster = match.roleInMatch == 'master';
+                      return Card(
+                        color: isActive
+                            ? Theme.of(context).primaryColor.withOpacity(0.1)
+                            : null,
+                        shape: isActive
+                            ? RoundedRectangleBorder(
+                                side: BorderSide(
+                                  color: Theme.of(context).primaryColor,
+                                  width: 2,
+                                ),
+                                borderRadius: BorderRadius.circular(8),
                               )
-                            : const Icon(Icons.chevron_right),
-                        onTap: () => _selectMatch(match.id),
-                      ),
-                    );
-                  }).toList(),
+                            : null,
+                        child: ListTile(
+                          title: Text(
+                            match.name,
+                            style: TextStyle(
+                              fontWeight: isActive
+                                  ? FontWeight.bold
+                                  : FontWeight.normal,
+                            ),
+                          ),
+                          subtitle: Text("Status: ${match.status}"),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              if (isMaster)
+                                IconButton(
+                                  icon: const Icon(Icons.edit, size: 20),
+                                  onPressed: () =>
+                                      _showMatchDialog(existingMatch: match),
+                                ),
+                              if (isActive)
+                                const Icon(
+                                  Icons.check_circle,
+                                  color: Colors.green,
+                                )
+                              else
+                                const Icon(Icons.chevron_right),
+                            ],
+                          ),
+                          onTap: () => _selectMatch(match.id),
+                          // onLongPress: () => _confirmLeave(match.id),
+                        ),
+                      );
+                    }).toList(),
+                  ],
                 );
               },
               loading: () => const Center(child: CircularProgressIndicator()),
@@ -165,49 +188,188 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       ),
     );
   }
-// Helper method inside _SettingsScreenState
+
   void _showMatchDialog({MatchModel? existingMatch}) {
     final isEditing = existingMatch != null;
     final nameController = TextEditingController(text: existingMatch?.name);
+    final cardSizeController = TextEditingController(
+      text: existingMatch?.cardSize.toString() ?? '25',
+    );
     final tokenController = TextEditingController();
+
+    // New fields from DTO
+    DateTime startDate = existingMatch?.startDate ?? DateTime.now();
+    DateTime endDate =
+        existingMatch?.endDate ?? DateTime.now().add(const Duration(days: 1));
+    String status = existingMatch?.status ?? 'ACTIVE';
+    int numbersPerEvent = existingMatch?.numbersPerEvent ?? 1;
+    bool autoDist = existingMatch?.autoNumberDistribution ?? true;
+
     bool isCreateMode = !isEditing;
 
     showDialog(
       context: context,
-      builder: (context) => StatefulBuilder(
+      builder: (dialogContext) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
-          title: Text(isEditing ? "Edit Match" : (isCreateMode ? "Create Match" : "Join Match")),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (!isEditing) ...[
-                ToggleButtons(
-                  isSelected: [isCreateMode, !isCreateMode],
-                  onPressed: (index) => setDialogState(() => isCreateMode = index == 0),
-                  children: const [Padding(padding: EdgeInsets.symmetric(horizontal: 16), child: Text("Create")), Padding(padding: EdgeInsets.symmetric(horizontal: 16), child: Text("Join"))],
-                ),
-                const SizedBox(height: 16),
+          title: Text(
+            isEditing
+                ? "Edit Match"
+                : (isCreateMode ? "Create Match" : "Join Match"),
+          ),
+          content: SingleChildScrollView(
+            // Added for form length
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (!isEditing) ...[
+                  ToggleButtons(
+                    isSelected: [isCreateMode, !isCreateMode],
+                    onPressed: (index) =>
+                        setDialogState(() => isCreateMode = index == 0),
+                    children: const [
+                      Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 16),
+                        child: Text("Create"),
+                      ),
+                      Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 16),
+                        child: Text("Join"),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                ],
+
+                if (isCreateMode || isEditing) ...[
+                  TextField(
+                    controller: nameController,
+                    decoration: const InputDecoration(labelText: "Match Name"),
+                  ),
+                  TextField(
+                    controller: cardSizeController,
+                    decoration: const InputDecoration(
+                      labelText: "Card Size (e.g. 25)",
+                    ),
+                    keyboardType: TextInputType.number,
+                  ),
+
+                  // Date Pickers
+                  ListTile(
+                    title: const Text("Start Date"),
+                    subtitle: Text("${startDate.toLocal()}".split(' ')[0]),
+                    trailing: const Icon(Icons.calendar_today),
+                    onTap: () async {
+                      final picked = await showDatePicker(
+                        context: context,
+                        initialDate: startDate,
+                        firstDate: DateTime(2024),
+                        lastDate: DateTime(2030),
+                      );
+                      if (picked != null)
+                        setDialogState(() => startDate = picked);
+                    },
+                  ),
+                  ListTile(
+                    title: const Text("End Date"),
+                    subtitle: Text("${endDate.toLocal()}".split(' ')[0]),
+                    trailing: const Icon(Icons.calendar_today),
+                    onTap: () async {
+                      final picked = await showDatePicker(
+                        context: context,
+                        initialDate: endDate,
+                        firstDate: DateTime(2024),
+                        lastDate: DateTime(2030),
+                      );
+                      if (picked != null)
+                        setDialogState(() => endDate = picked);
+                    },
+                  ),
+
+                  // Status Dropdown
+                  DropdownButtonFormField<String>(
+                    value: status,
+                    items: ['ACTIVE', 'DRAFT', 'COMPLETED', 'CANCELLED']
+                        .map((s) => DropdownMenuItem(value: s, child: Text(s)))
+                        .toList(),
+                    onChanged: (val) => setDialogState(() => status = val!),
+                    decoration: const InputDecoration(labelText: "Status"),
+                  ),
+
+                  if (isEditing) ...[
+                    const Divider(),
+                    SwitchListTile(
+                      title: const Text("Auto Distribution"),
+                      value: autoDist,
+                      onChanged: (v) => setDialogState(() => autoDist = v),
+                    ),
+                    TextField(
+                      decoration: const InputDecoration(
+                        labelText: "Numbers Per Event",
+                      ),
+                      keyboardType: TextInputType.number,
+                      onChanged: (v) => numbersPerEvent = int.tryParse(v) ?? 1,
+                    ),
+                  ],
+                ],
+
+                if (!isCreateMode && !isEditing)
+                  TextField(
+                    controller: tokenController,
+                    decoration: const InputDecoration(labelText: "Join Token"),
+                  ),
               ],
-              if (isCreateMode || isEditing)
-                TextField(controller: nameController, decoration: const InputDecoration(labelText: "Match Name")),
-              if (!isCreateMode && !isEditing)
-                TextField(controller: tokenController, decoration: const InputDecoration(labelText: "Join Token")),
-            ],
+            ),
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancel")),
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("Cancel"),
+            ),
             ElevatedButton(
               onPressed: () async {
                 final service = ref.read(matchServiceProvider);
-                if (isEditing) {
-                  await service.updateMatch(existingMatch.id, {"name": nameController.text});
-                } else if (isCreateMode) {
-                  await service.createMatch({"name": nameController.text});
-                } else {
-                  await service.joinMatch(tokenController.text);
+                final scaffoldMessenger = ScaffoldMessenger.of(context);
+                final navigator = Navigator.of(context);
+
+                try {
+                  if (isEditing) {
+                    await service.updateMatch(existingMatch.id, {
+                      "name": nameController.text,
+                      "startDate": startDate.toIso8601String(),
+                      "endDate": endDate.toIso8601String(),
+                      "cardSize": int.tryParse(cardSizeController.text) ?? 25,
+                      "status": status,
+                      "numbersPerEvent": numbersPerEvent,
+                      "autoNumberDistribution": autoDist,
+                    });
+                  } else if (isCreateMode) {
+                    await service.createMatch({
+                      "name": nameController.text,
+                      "startDate": startDate.toIso8601String(),
+                      "endDate": endDate.toIso8601String(),
+                      "cardSize": int.tryParse(cardSizeController.text) ?? 25,
+                      "status": status,
+                    });
+                  } else {
+                    // await service.joinMatch(tokenController.text);
+                  }
+
+                  // 🔥 KEY FIX: Invalidate and await the refresh
+                  ref.invalidate(allMatchesProvider);
+                  await ref.read(allMatchesProvider.future);
+
+                  if (mounted) navigator.pop();
+                  scaffoldMessenger.showSnackBar(
+                    const SnackBar(content: Text("Success!")),
+                  );
+                } catch (e) {
+                  scaffoldMessenger.showSnackBar(
+                    SnackBar(
+                      content: Text("Error: $e"),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
                 }
-                ref.invalidate(allMatchesProvider); // REFRESH LIST INSTANTLY
-                Navigator.pop(context);
               },
               child: Text(isEditing ? "Save" : "Confirm"),
             ),
@@ -216,6 +378,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       ),
     );
   }
+
   Widget _buildSectionHeader(String title) {
     return Padding(
       padding: const EdgeInsets.only(left: 4, bottom: 8),
@@ -235,9 +398,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     try {
       // We wrap the field inside a 'settings' map to match the backend structure
       final updateData = {
-        "settings": {
-          field: value,
-        }
+        "settings": {field: value},
       };
 
       await ref.read(userServiceProvider).updateProfile(updateData);
@@ -246,12 +407,18 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       ref.invalidate(userProvider);
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Setting updated"), duration: Duration(seconds: 1)),
+        const SnackBar(
+          content: Text("Setting updated"),
+          duration: Duration(seconds: 1),
+        ),
       );
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Update failed: $e"), backgroundColor: Colors.red),
+          SnackBar(
+            content: Text("Update failed: $e"),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     }

@@ -23,4 +23,12 @@ class MatchService {
     final response = await _dio.get('/matches/context');
     return MatchContext.fromJson(response.data);
   }
+
+  Future<void> updateMatch(String matchId, Map<String, dynamic> map) async {
+    await _dio.put('/matches/$matchId', data: map);
+  }
+
+  Future<void> createMatch(Map<String, dynamic> map) async {
+    await _dio.post("/matches", data: map);
+  }
 }

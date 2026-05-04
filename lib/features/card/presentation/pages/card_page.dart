@@ -101,7 +101,11 @@ class _CardPageState extends ConsumerState<CardPage> {
           child: eventsAsync.when(
             data: (events) {
               final filtered = events
-                  .where((e) => e.name.toLowerCase().contains(_searchQuery.toLowerCase()))
+                  .where(
+                    (e) => e.name.toLowerCase().contains(
+                      _searchQuery.toLowerCase(),
+                    ),
+                  )
                   .toList();
 
               if (filtered.isEmpty) {
@@ -115,25 +119,50 @@ class _CardPageState extends ConsumerState<CardPage> {
                   final event = filtered[i];
                   return Card(
                     child: ListTile(
-                      title: Text(event.name, style: const TextStyle(fontWeight: FontWeight.bold)),
-                      subtitle: Text(event.called ? "Called Numbers: ${event.numbers}" : "Status: Waiting"),
+                      title: Text(
+                        event.name,
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      subtitle: Text(
+                        event.called
+                            ? "Called Numbers: ${event.numbers}"
+                            : "Status: Waiting",
+                      ),
                       trailing: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           IconButton(
-                            icon: Icon(event.called ? Icons.undo : Icons.casino,
-                                color: event.called ? Colors.orange : Colors.green),
+                            icon: Icon(
+                              event.called ? Icons.undo : Icons.casino,
+                              color: event.called
+                                  ? Colors.orange
+                                  : Colors.green,
+                            ),
                             onPressed: () => event.called
-                                ? ref.read(eventProvider.notifier).recallEvent(event.id)
-                                : ref.read(eventProvider.notifier).callEvent(event.id),
+                                ? ref
+                                      .read(eventProvider.notifier)
+                                      .recallEvent(event.id)
+                                : ref
+                                      .read(eventProvider.notifier)
+                                      .callEvent(event.id),
                           ),
                           IconButton(
                             icon: const Icon(Icons.edit),
-                            onPressed: () => _openEventDialog(context, ref, data.match.id, event),
+                            onPressed: () => _openEventDialog(
+                              context,
+                              ref,
+                              data.match.id,
+                              event,
+                            ),
                           ),
                           IconButton(
-                            icon: const Icon(Icons.delete, color: Colors.redAccent),
-                            onPressed: () => ref.read(eventProvider.notifier).deleteEvent(event.id),
+                            icon: const Icon(
+                              Icons.delete,
+                              color: Colors.redAccent,
+                            ),
+                            onPressed: () => ref
+                                .read(eventProvider.notifier)
+                                .deleteEvent(event.id),
                           ),
                         ],
                       ),
@@ -152,11 +181,11 @@ class _CardPageState extends ConsumerState<CardPage> {
 }
 
 void _openEventDialog(
-    BuildContext context,
-    WidgetRef ref,
-    String matchId, [
-      EventModel? event,
-    ]) {
+  BuildContext context,
+  WidgetRef ref,
+  String matchId, [
+  EventModel? event,
+]) {
   final nameController = TextEditingController(text: event?.name ?? '');
   final descController = TextEditingController(text: event?.description ?? '');
   bool autoCall = false;
@@ -168,8 +197,14 @@ void _openEventDialog(
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          TextField(controller: nameController, decoration: const InputDecoration(labelText: "Name")),
-          TextField(controller: descController, decoration: const InputDecoration(labelText: "Description")),
+          TextField(
+            controller: nameController,
+            decoration: const InputDecoration(labelText: "Name"),
+          ),
+          TextField(
+            controller: descController,
+            decoration: const InputDecoration(labelText: "Description"),
+          ),
           if (event == null)
             CheckboxListTile(
               title: const Text("Auto Call"),
@@ -179,19 +214,22 @@ void _openEventDialog(
         ],
       ),
       actions: [
-        TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancel")),
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text("Cancel"),
+        ),
         ElevatedButton(
-          onPressed: () async {
+          onPressed: () {
             final notifier = ref.read(eventProvider.notifier);
 
             if (event == null) {
-              await notifier.createEvent({
+              notifier.createEvent({
                 "name": nameController.text,
                 "description": descController.text,
                 "autoCall": autoCall,
               });
             } else {
-              await notifier.updateEvent(event.id, {
+              notifier.updateEvent(event.id, {
                 "name": nameController.text,
                 "description": descController.text,
               });
