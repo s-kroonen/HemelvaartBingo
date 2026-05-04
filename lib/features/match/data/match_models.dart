@@ -1,7 +1,5 @@
 // lib/features/match/data/match_models.dart
 
-import '../../card/models/card_model.dart';
-
 class MatchModel {
   final String id;
   final String name;
@@ -36,29 +34,30 @@ class MatchModel {
       cardSize: json['cardSize'] is int ? json['cardSize'] : 0,
       status: json['status']?.toString() ?? 'ACTIVE',
       // Safely handle the list cast
-      calledNumbers: (json['calledNumbers'] as List?)
-          ?.map((e) => int.tryParse(e.toString()) ?? 0)
-          .toList() ?? [],
+      calledNumbers:
+          (json['calledNumbers'] as List?)
+              ?.map((e) => int.tryParse(e.toString()) ?? 0)
+              .toList() ??
+          [],
     );
   }
 }
 
 class MatchContext {
   final MatchModel match;
-  final List<CellModel>? cells;
   final String roleInMatch;
 
-  MatchContext({required this.match, this.cells, required this.roleInMatch});
+  MatchContext({required this.match, required this.roleInMatch});
 
   factory MatchContext.fromJson(Map<String, dynamic> json) {
     return MatchContext(
       // Pass the nested map safely
       match: MatchModel.fromJson(json['match'] as Map<String, dynamic>?),
-      cells: json['card'] != null && json['card']['cells'] != null
-          ? (json['card']['cells'] as List)
-          .map((i) => CellModel.fromJson(i))
-          .toList()
-          : null,
+      // cells: json['card'] != null && json['card']['cells'] != null
+      //     ? (json['card']['cells'] as List)
+      //     .map((i) => CellModel.fromJson(i))
+      //     .toList()
+      //     : null,
       // If roleInMatch is missing in the invite preview, default to "user"
       roleInMatch: json['roleInMatch']?.toString() ?? 'user',
     );

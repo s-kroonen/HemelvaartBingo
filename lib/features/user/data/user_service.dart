@@ -1,7 +1,5 @@
 import 'package:dio/dio.dart';
-import 'package:flutter/foundation.dart';
-import 'package:hemelvaartbingo/features/card/models/card_model.dart';
-
+import '../../card/data/card_model.dart';
 import '../data/user_model.dart';
 
 // lib/features/user/data/user_service.dart
@@ -21,9 +19,14 @@ class UserService {
 
   Future<CardModel> updateCellState(String cellId, bool isChecked) async {
     final res = await _dio.put(
-      '/users/me/card/cell',
+      '/cards/cell',
       data: {"cellId": cellId, "isChecked": isChecked},
     );
+    return CardModel.fromJson(res.data);
+  }
+
+  Future<CardModel> getMyCard() async {
+    final res = await _dio.put('/cards/my-card');
     return CardModel.fromJson(res.data);
   }
 

@@ -2,9 +2,10 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:hemelvaartbingo/features/card/providers/card_provider.dart';
 import 'dart:math';
 import '../../../match/providers/match_provider.dart';
-import '../../models/card_model.dart';
+import '../../data/card_model.dart';
 import 'bingo_cell_widget.dart';
 
 class BingoGrid extends ConsumerWidget {
@@ -37,7 +38,7 @@ class BingoGrid extends ConsumerWidget {
             // Use the notifier to send the update to NestJS
             if (cell.value != "FREE") {
               ref
-                  .read(currentMatchProvider.notifier)
+                  .read(currentCardProvider.notifier)
                   .toggleCellCheck(cell.id, !cell.isChecked);
             }
           },

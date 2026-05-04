@@ -1,7 +1,5 @@
 // lib/features/card/data/card_models.dart
 
-// lib/features/card/data/card_models.dart
-
 class CellModel {
   final String id;
   final String value;

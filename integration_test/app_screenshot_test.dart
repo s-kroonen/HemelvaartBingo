@@ -4,7 +4,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hemelvaartbingo/features/auth/data/authState_model.dart';
 import 'package:hemelvaartbingo/features/auth/providers/authState_provider.dart';
-import 'package:hemelvaartbingo/features/card/models/card_model.dart';
 import 'package:hemelvaartbingo/features/event/data/event_model.dart';
 import 'package:hemelvaartbingo/features/event/providers/event_provider.dart';
 import 'package:hemelvaartbingo/features/match/data/match_models.dart';
@@ -35,15 +34,6 @@ class DemoMatchNotifier extends CurrentMatchNotifier {
         status: "active",
       ),
       roleInMatch: "player", // change to "master" for master test
-      cells: List.generate(
-        25,
-        (i) => CellModel(
-          id: "$i",
-          position: i,
-          value: "$i",
-          isChecked: i % 3 == 0,
-        ),
-      ),
     );
   }
 }

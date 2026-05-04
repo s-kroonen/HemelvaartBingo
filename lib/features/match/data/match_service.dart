@@ -8,19 +8,19 @@ class MatchService {
 
   // Fetch all matches for the current user
   Future<List<MatchModel>> fetchMyMatches() async {
-    final response = await _dio.get('/users/me/matches');
+    final response = await _dio.get('/matches');
     return (response.data as List).map((m) => MatchModel.fromJson(m)).toList();
   }
 
-  // Fetch the specific context (Match + Card + Role)
+  // Fetch the specific context (Match + Role)
   Future<MatchContext> fetchMatchContext(String matchId) async {
-    final response = await _dio.get('/users/me/matches/$matchId');
+    final response = await _dio.get('/matches/$matchId');
     return MatchContext.fromJson(response.data);
   }
 
   // Get the current active match context
   Future<MatchContext> fetchCurrentMatchContext() async {
-    final response = await _dio.get('/users/me/current-match');
+    final response = await _dio.get('/matches/context');
     return MatchContext.fromJson(response.data);
   }
 }

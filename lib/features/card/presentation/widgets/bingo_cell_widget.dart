@@ -1,7 +1,8 @@
 // lib/features/card/presentation/widgets/bingo_cell_widget.dart
 
 import 'package:flutter/material.dart';
-import '../../models/card_model.dart'; // Import CellModel
+
+import '../../data/card_model.dart';
 
 class BingoCellWidget extends StatelessWidget {
   final CellModel cell;

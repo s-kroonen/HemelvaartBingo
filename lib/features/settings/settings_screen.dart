@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../shared/providers/theme_provider.dart';
+import '../match/data/match_models.dart';
 import '../match/providers/match_provider.dart';
 import '../user/providers/user_provider.dart';
 // lib/features/user/presentation/pages/settings_screen.dart
@@ -164,7 +165,57 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       ),
     );
   }
+// Helper method inside _SettingsScreenState
+  void _showMatchDialog({MatchModel? existingMatch}) {
+    final isEditing = existingMatch != null;
+    final nameController = TextEditingController(text: existingMatch?.name);
+    final tokenController = TextEditingController();
+    bool isCreateMode = !isEditing;
 
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: Text(isEditing ? "Edit Match" : (isCreateMode ? "Create Match" : "Join Match")),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (!isEditing) ...[
+                ToggleButtons(
+                  isSelected: [isCreateMode, !isCreateMode],
+                  onPressed: (index) => setDialogState(() => isCreateMode = index == 0),
+                  children: const [Padding(padding: EdgeInsets.symmetric(horizontal: 16), child: Text("Create")), Padding(padding: EdgeInsets.symmetric(horizontal: 16), child: Text("Join"))],
+                ),
+                const SizedBox(height: 16),
+              ],
+              if (isCreateMode || isEditing)
+                TextField(controller: nameController, decoration: const InputDecoration(labelText: "Match Name")),
+              if (!isCreateMode && !isEditing)
+                TextField(controller: tokenController, decoration: const InputDecoration(labelText: "Join Token")),
+            ],
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancel")),
+            ElevatedButton(
+              onPressed: () async {
+                final service = ref.read(matchServiceProvider);
+                if (isEditing) {
+                  await service.updateMatch(existingMatch.id, {"name": nameController.text});
+                } else if (isCreateMode) {
+                  await service.createMatch({"name": nameController.text});
+                } else {
+                  await service.joinMatch(tokenController.text);
+                }
+                ref.invalidate(allMatchesProvider); // REFRESH LIST INSTANTLY
+                Navigator.pop(context);
+              },
+              child: Text(isEditing ? "Save" : "Confirm"),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
   Widget _buildSectionHeader(String title) {
     return Padding(
       padding: const EdgeInsets.only(left: 4, bottom: 8),

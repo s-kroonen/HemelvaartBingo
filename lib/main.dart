@@ -60,7 +60,7 @@ class _MyAppState extends ConsumerState<MyApp> {
 
     return MaterialApp.router(
       routerConfig: router,
-      title: 'Family Bingo',
+      title: 'BingoVaart',
       theme: AppThemes.lightTheme,
       darkTheme: AppThemes.darkTheme,
       themeMode: themeMode,
