@@ -158,14 +158,20 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                             children: [
                               if (isMaster)
                                 IconButton(
-                                  icon: const Icon(Icons.link, color: Colors.blue),
+                                  icon: const Icon(
+                                    Icons.link,
+                                    color: Colors.blue,
+                                  ),
                                   tooltip: "Manage Invites",
                                   onPressed: () {
                                     // Navigate to ManageInvitesScreen(matchId: match.id)
                                     // If using GoRouter: context.push('/settings/invites/${match.id}');
-                                    context.push('/settings/invites/${match.id}');
+                                    context.push(
+                                      '/settings/invites/${match.id}',
+                                    );
                                   },
                                 ),
+                              if (isMaster)
                                 IconButton(
                                   icon: const Icon(Icons.edit, size: 20),
                                   onPressed: () =>
