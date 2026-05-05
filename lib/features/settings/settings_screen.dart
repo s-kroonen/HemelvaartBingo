@@ -427,7 +427,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   Future<void> _selectMatch(String matchId) async {
     try {
       await ref.read(userServiceProvider).updateCurrentMatch(matchId);
-      ref.invalidate(currentMatchIdProvider);
+      ref.invalidate(currentMatchProvider);
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text("Active Match Switched!")));

@@ -31,7 +31,7 @@ class DemoMatchNotifier extends CurrentMatchNotifier {
         calledNumbers: [12, 34, 56],
         name: "Demo Match",
         cardSize: 5,
-        status: "active",
+        status: "active", roleInMatch: '', startDate: null, endDate: null, numbersPerEvent: null, autoNumberDistribution: null,
       ),
       roleInMatch: "player", // change to "master" for master test
     );
@@ -141,7 +141,7 @@ void main() {
                   name: "Demo Match",
                   calledNumbers: [12, 34],
                   cardSize: 5,
-                  status: "active",
+                  status: "active", roleInMatch: '', startDate: null, endDate: null, numbersPerEvent: null, autoNumberDistribution: null,
                 ),
               ];
             }),

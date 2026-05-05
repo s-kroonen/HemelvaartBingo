@@ -53,7 +53,7 @@ class MatchModel {
               ?.map((e) => int.tryParse(e.toString()) ?? 0)
               .toList() ??
           [],
-      roleInMatch: json['roleInMatch']?.toString() ?? 'master',
+      roleInMatch: json['roleInMatch']?.toString() ?? 'player',
       startDate: DateTime.parse(
         json['startDate']?.toString() ?? DateTime.january.toString(),
       ),

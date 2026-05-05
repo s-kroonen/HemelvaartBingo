@@ -3,7 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 
 const apiBaseUrl = String.fromEnvironment(
   'API_BASE_URL',
-  defaultValue: "https://bingo.kroon-en.nl/api",
+  defaultValue: "https://bingo.kroon-en.nl/api/v1",
 );
 
 class ApiClient {
