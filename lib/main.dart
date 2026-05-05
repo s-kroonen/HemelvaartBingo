@@ -52,18 +52,26 @@ class _MyAppState extends ConsumerState<MyApp> {
       router.go('/join/$token');
     }
   }
-
   @override
   Widget build(BuildContext context) {
-    final themeMode = ref.watch(themeProvider);
+    // 1. Watch the full theme state (contains .mode and .style)
+    final themeState = ref.watch(themeProvider);
     final router = ref.watch(routerProvider);
 
     return MaterialApp.router(
       routerConfig: router,
       title: 'BingoVaart',
-      theme: AppThemes.lightTheme,
-      darkTheme: AppThemes.darkTheme,
-      themeMode: themeMode,
+
+      // 2. Use the dynamic generator for Light Theme
+      theme: AppThemes.createTheme(themeState, false),
+
+      // 3. Use the dynamic generator for Dark Theme
+      darkTheme: AppThemes.createTheme(themeState, true),
+
+      // 4. Pass the mode (system, light, or dark)
+      themeMode: themeState.mode,
+
+      debugShowCheckedModeBanner: false,
     );
   }
 

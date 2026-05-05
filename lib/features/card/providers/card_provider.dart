@@ -2,7 +2,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hemelvaartbingo/features/card/data/card_model.dart';
 import 'package:hemelvaartbingo/features/card/data/card_service.dart';
 import '../../../core/network/api_client_provider.dart';
-import '../../user/providers/user_provider.dart';
 
 // Provide the service first
 final cardServiceProvider = Provider<CardService>((ref) {

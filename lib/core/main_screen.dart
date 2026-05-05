@@ -5,6 +5,7 @@ import 'package:hemelvaartbingo/features/settings/settings_screen.dart';
 import '../features/card/presentation/pages/card_page.dart';
 import '../features/user/presentation/profile_screen.dart';
 import '../shared/widgets/main_navigation.dart';
+import '../shared/widgets/themed_background.dart';
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -26,7 +27,9 @@ class _MainScreenState extends State<MainScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: pages[currentIndex],
+      body: ThemedBackground(
+        child: pages[currentIndex],
+      ),
       bottomNavigationBar: MainNavigation(
         currentIndex: currentIndex,
         onTap: (index) {

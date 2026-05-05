@@ -21,11 +21,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = ref.watch(themeProvider);
     final matchesAsync = ref.watch(allMatchesProvider);
-    final userAsync = ref.watch(
-      userProvider,
-    ); // Current user profile from NestJS
+    final themeState = ref.watch(themeProvider);
+    final userAsync = ref.watch(userProvider);
     final currentMatchId = ref.watch(currentMatchIdProvider); // Just the ID
 
     return Scaffold(
@@ -61,36 +59,92 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             const SizedBox(height: 20),
             _buildSectionHeader("Appearance"),
             Card(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 8,
-                ),
-                child: DropdownButtonFormField<ThemeMode>(
-                  value: theme,
-                  decoration: const InputDecoration(
-                    border: InputBorder.none,
-                    labelText: "App Theme",
+              child: Column(
+                children: [
+                  // 1. Light/Dark Mode Selector
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 4,
+                    ),
+                    child: DropdownButtonFormField<ThemeMode>(
+                      value: themeState.mode,
+                      decoration: const InputDecoration(
+                        border: InputBorder.none,
+                        labelText: "Display Mode",
+                      ),
+                      items: const [
+                        DropdownMenuItem(
+                          value: ThemeMode.system,
+                          child: Text("System Default"),
+                        ),
+                        DropdownMenuItem(
+                          value: ThemeMode.light,
+                          child: Text("Light Mode"),
+                        ),
+                        DropdownMenuItem(
+                          value: ThemeMode.dark,
+                          child: Text("Dark Mode"),
+                        ),
+                      ],
+                      onChanged: (val) {
+                        if (val != null) {
+                          ref.read(themeProvider.notifier).setThemeMode(val);
+                        }
+                      },
+                    ),
                   ),
-                  items: const [
-                    DropdownMenuItem(
-                      value: ThemeMode.system,
-                      child: Text("System Default"),
+
+                  const Divider(height: 1), // Simple separator
+                  // 2. Visual Style/Color Selector
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 4,
                     ),
-                    DropdownMenuItem(
-                      value: ThemeMode.light,
-                      child: Text("Light Mode"),
+                    child: DropdownButtonFormField<AppThemeStyle>(
+                      value: themeState.style,
+                      decoration: const InputDecoration(
+                        border: InputBorder.none,
+                        labelText: "App Visual Style",
+                      ),
+                      items: AppThemeStyle.values.map((style) {
+                        return DropdownMenuItem(
+                          value: style,
+                          child: Row(
+                            children: [
+                              // Visual indicator of the color
+                              Container(
+                                width: 18,
+                                height: 18,
+                                decoration: BoxDecoration(
+                                  color: style.seedColor,
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: Colors.grey.withOpacity(0.5),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              // Capitalize the first letter for the UI
+                              Text(
+                                style.name[0].toUpperCase() +
+                                    style.name.substring(1),
+                              ),
+                              const SizedBox(width: 8),
+                              Icon(style.icon, size: 16, color: Colors.grey),
+                            ],
+                          ),
+                        );
+                      }).toList(),
+                      onChanged: (val) {
+                        if (val != null) {
+                          ref.read(themeProvider.notifier).setThemeStyle(val);
+                        }
+                      },
                     ),
-                    DropdownMenuItem(
-                      value: ThemeMode.dark,
-                      child: Text("Dark Mode"),
-                    ),
-                  ],
-                  onChanged: (val) {
-                    if (val != null)
-                      ref.read(themeProvider.notifier).setTheme(val);
-                  },
-                ),
+                  ),
+                ],
               ),
             ),
             const SizedBox(height: 20),

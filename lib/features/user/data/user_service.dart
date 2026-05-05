@@ -1,5 +1,4 @@
 import 'package:dio/dio.dart';
-import '../../card/data/card_model.dart';
 import '../data/user_model.dart';
 
 // lib/features/user/data/user_service.dart

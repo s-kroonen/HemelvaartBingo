@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hemelvaartbingo/features/card/providers/card_provider.dart';
 import 'dart:math';
-import '../../../match/providers/match_provider.dart';
 import '../../data/card_model.dart';
 import 'bingo_cell_widget.dart';
 
