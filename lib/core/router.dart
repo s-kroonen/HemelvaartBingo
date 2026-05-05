@@ -7,6 +7,7 @@ import '../features/auth/presentation/pages/login_page.dart';
 import '../features/auth/presentation/pages/register_page.dart';
 import '../features/auth/providers/authState_provider.dart';
 import '../features/invites/presentation/join_match_screen.dart';
+import '../features/invites/presentation/manage_invite_screen.dart';
 import 'main_screen.dart';
 
 import 'dart:async';
@@ -44,6 +45,13 @@ final routerProvider = Provider<GoRouter>((ref) {
     routes: [
       GoRoute(path: '/', builder: (context, state) => const MainScreen()),
       GoRoute(path: '/login', builder: (context, state) => const LoginPage()),
+      GoRoute(
+        path: '/settings/invites/:matchId',
+        builder: (context, state) {
+          final matchId = state.pathParameters['matchId'] ?? "";
+          return ManageInvitesScreen(matchId: matchId);
+        },
+      ),
       GoRoute(
         path: '/register',
         builder: (context, state) => const RegisterPage(),

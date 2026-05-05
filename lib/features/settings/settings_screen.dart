@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../shared/providers/theme_provider.dart';
 import '../match/data/match_models.dart';
@@ -156,6 +157,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               if (isMaster)
+                                IconButton(
+                                  icon: const Icon(Icons.link, color: Colors.blue),
+                                  tooltip: "Manage Invites",
+                                  onPressed: () {
+                                    // Navigate to ManageInvitesScreen(matchId: match.id)
+                                    // If using GoRouter: context.push('/settings/invites/${match.id}');
+                                    context.push('/settings/invites/${match.id}');
+                                  },
+                                ),
                                 IconButton(
                                   icon: const Icon(Icons.edit, size: 20),
                                   onPressed: () =>

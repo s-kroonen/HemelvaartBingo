@@ -1,49 +1,55 @@
-// lib/features/invites/data/models/invite_model.dart
+// lib/features/match/data/invite_model.dart
 
 class InviteMetadata {
-  final bool watchAdBeforeJoin; // Defaulted to false for easier UI logic
-  final String? joinAsRole;
+  final bool watchAdBeforeJoin;
+  final String joinAsRole;
   final String? description;
 
   InviteMetadata({
-    this.watchAdBeforeJoin = false,
-    this.joinAsRole,
+    required this.watchAdBeforeJoin,
+    required this.joinAsRole,
     this.description,
   });
 
-  factory InviteMetadata.fromJson(Map<String, dynamic>? json) {
-    // If the whole metadata object is missing from backend
-    if (json == null) return InviteMetadata();
+  factory InviteMetadata.fromJson(Map<String, dynamic> json) => InviteMetadata(
+    watchAdBeforeJoin: json['watchAdBeforeJoin'] ?? false,
+    joinAsRole: json['joinAsRole'] ?? 'user',
+    description: json['description'],
+  );
 
-    return InviteMetadata(
-      watchAdBeforeJoin: json['watchAdBeforeJoin'] ?? false,
-      joinAsRole: json['joinAsRole']?.toString(),
-      description: json['description']?.toString(),
-    );
-  }
+  Map<String, dynamic> toJson() => {
+    'watchAdBeforeJoin': watchAdBeforeJoin,
+    'joinAsRole': joinAsRole,
+    'description': description,
+  };
 }
 
 class InviteModel {
-  final String matchId;
+  final String id;
   final String name;
+  final String matchId;
   final String token;
+  final bool isActive;
+  final DateTime? expiresAt;
   final InviteMetadata metadata;
 
   InviteModel({
-    required this.matchId,
+    required this.id,
     required this.name,
+    required this.matchId,
     required this.token,
+    required this.isActive,
+    this.expiresAt,
     required this.metadata,
   });
 
-  factory InviteModel.fromJson(Map<String, dynamic> json) {
-    return InviteModel(
-      // Ensure these exist or provide fallback to avoid '!' crashes
-      matchId: json['matchId']?.toString() ?? '',
-      token: json['token']?.toString() ?? '',
-      name: json['name']?.toString() ?? 'Unnamed Match',
-      // Safely handle the nested object
-      metadata: InviteMetadata.fromJson(json['metadata'] as Map<String, dynamic>?),
-    );
-  }
+  factory InviteModel.fromJson(Map<String, dynamic> json) => InviteModel(
+    id: json['id'] ?? json['_id'],
+    name: json['name'] ?? '',
+    matchId: json['matchId'] ?? '',
+    token: json['token'] ?? '',
+    isActive: json['isActive'] ?? true,
+    expiresAt: json['expiresAt'] != null ? DateTime.parse(json['expiresAt']) : null,
+    metadata: InviteMetadata.fromJson(json['metadata'] ?? {}),
+  );
 }

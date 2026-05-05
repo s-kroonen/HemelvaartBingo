@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/network/api_client_provider.dart';
+import '../../invites/data/invite_model.dart';
 import '../../user/providers/user_provider.dart';
 import '../data/match_service.dart';
 import '../data/match_models.dart';
@@ -82,4 +83,7 @@ final allMatchesProvider = FutureProvider<List<MatchModel>>((ref) async {
 final currentMatchIdProvider = Provider<String?>((ref) {
   final matchAsync = ref.watch(currentMatchProvider);
   return matchAsync.value?.match.id;
+});
+final matchInvitesProvider = FutureProvider.family<List<InviteModel>, String>((ref, matchId) async {
+  return ref.watch(matchServiceProvider).fetchInvites(matchId);
 });
