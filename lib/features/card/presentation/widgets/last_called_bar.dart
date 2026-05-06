@@ -9,10 +9,19 @@ class LastCalledBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
     if (calledNumbers.isEmpty) {
-      return const Padding(
-        padding: EdgeInsets.all(16.0),
-        child: Text("Waiting for the Master to call a number..."),
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(16.0),
+        color: colorScheme.surface.withOpacity(0.05), // Very subtle
+        child: const Text(
+          "Waiting for the Master to call a number...",
+          style: TextStyle(fontStyle: FontStyle.italic),
+          textAlign: TextAlign.center,
+        ),
       );
     }
 
@@ -20,22 +29,40 @@ class LastCalledBar extends StatelessWidget {
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      color: Colors.blueGrey.withOpacity(0.1),
+      // Use a themed container color that lets the background peek through
+      decoration: BoxDecoration(
+        color: colorScheme.secondaryContainer.withOpacity(0.7),
+        border: Border(
+          bottom: BorderSide(color: colorScheme.outlineVariant.withOpacity(0.3)),
+        ),
+      ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text("LAST NUMBER", style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+              Text(
+                  "LAST NUMBER",
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: colorScheme.onSecondaryContainer,
+                  )
+              ),
               Text(
                 lastNumber.toString(),
-                style: const TextStyle(fontSize: 28, fontWeight: FontWeight.normal, color: Colors.blue),
+                style: theme.textTheme.displaySmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: colorScheme.primary, // Uses the current Theme Style color (Green/Pink/Blue)
+                ),
               ),
             ],
           ),
-          // Placeholder for the "Show History" / Ad button
-          TextButton.icon(
+          ElevatedButton.icon(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: colorScheme.primary,
+              foregroundColor: colorScheme.onPrimary,
+            ),
             onPressed: () {
               // TODO: Trigger Ad and show full list
             },
