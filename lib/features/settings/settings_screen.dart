@@ -27,6 +27,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final currentMatchId = ref.watch(currentMatchIdProvider); // Just the ID
 
     return Scaffold(
+      backgroundColor: Colors.transparent,
       appBar: AppBar(title: const Text("Settings"), centerTitle: true),
       body: userAsync.when(
         data: (user) => ListView(

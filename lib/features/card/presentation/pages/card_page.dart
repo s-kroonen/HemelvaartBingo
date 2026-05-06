@@ -24,6 +24,7 @@ class _CardPageState extends ConsumerState<CardPage> {
     final contextAsync = ref.watch(currentMatchProvider);
 
     return Scaffold(
+      backgroundColor: Colors.transparent,
       appBar: AppBar(title: const Text("Game Session"), centerTitle: true),
       body: contextAsync.when(
         data: (matchContext) {

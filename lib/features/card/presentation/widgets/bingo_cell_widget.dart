@@ -20,7 +20,7 @@ class BingoCellWidget extends StatelessWidget {
       onTap: onTap,
       child: Container(
         decoration: BoxDecoration(
-          color: cell.isChecked ? Colors.green : Theme.of(context).cardColor,
+          color: cell.isChecked ? Colors.green : Colors.transparent, ,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(color: Colors.black12),
           boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 2)],

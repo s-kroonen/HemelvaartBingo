@@ -16,6 +16,7 @@ class ProfileScreen extends ConsumerWidget {
 
     return userAsync.when(
       data: (user) => Scaffold(
+        backgroundColor: Colors.transparent,
         body: CustomScrollView(
           slivers: [
             const SliverAppBar(expandedHeight: 120, title: Text("Player Profile"), floating: true),

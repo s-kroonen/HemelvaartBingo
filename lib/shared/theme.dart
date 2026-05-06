@@ -1,6 +1,3 @@
-import 'package:flutter/material.dart';
-import 'package:hemelvaartbingo/shared/providers/theme_provider.dart';
-
 // lib/shared/theme.dart
 import 'package:flutter/material.dart';
 import 'package:hemelvaartbingo/shared/providers/theme_provider.dart';

@@ -15,12 +15,7 @@ class MainNavigation extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BottomNavigationBar(
-      type: BottomNavigationBarType.fixed,
-      backgroundColor: Colors.lightBlueAccent,
       currentIndex: currentIndex,
-      selectedIconTheme: IconThemeData(
-        color: Colors.yellow,
-      ),
       onTap: onTap,
       items: const [
         BottomNavigationBarItem(
