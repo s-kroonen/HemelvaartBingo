@@ -27,47 +27,6 @@ class CurrentMatchNotifier extends AsyncNotifier<MatchContext> {
       return ref.read(matchServiceProvider).fetchMatchContext(matchId);
     });
   }
-
-  // Future<void> toggleCellCheck(String cellId, bool isChecked) async {
-  //   final current = state.value;
-  //
-  //   if (current == null) return;
-  //
-  //   try {
-  //     // OPTIONAL: optimistic update
-  //     // final updatedCells = current.cells!.map((cell) {
-  //     //   if (cell.id == cellId) {
-  //     //     return cell.copyWith(isChecked: !cell.isChecked);
-  //     //   }
-  //     //   return cell;
-  //     // }).toList();
-  //     //
-  //     // state = AsyncData(
-  //     //   MatchContext(
-  //     //     match: current.match,
-  //     //     roleInMatch: current.roleInMatch,
-  //     //     cells: updatedCells,
-  //     //   ),
-  //     // );
-  //
-  //     // 🔥 Call backend
-  //
-  //     final updatedCard = await ref
-  //         .read(userServiceProvider)
-  //         .updateCellState(cellId, isChecked);
-  //
-  //     // Replace with real backend state (source of truth)
-  //     state = AsyncData(
-  //       MatchContext(
-  //         match: current.match,
-  //         roleInMatch: current.roleInMatch,
-  //         // cells: updatedCard.cells,
-  //       ),
-  //     );
-  //   } catch (e, st) {
-  //     state = AsyncError(e, st);
-  //   }
-  // }
 }
 
 final currentMatchProvider =

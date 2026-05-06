@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
 
 import '../../../core/network/api_client_provider.dart';
 import '../../match/providers/match_provider.dart';
@@ -13,6 +14,13 @@ final eventProvider =
 AsyncNotifierProvider<EventNotifier, List<EventModel>>(
   EventNotifier.new,
 );
+final latestEventProvider = FutureProvider.family<EventModel?, String>((ref, matchId) {
+  return ref.watch(eventServiceProvider).getLatestEvent(matchId);
+});
+
+// We don't auto-fetch history because it's behind an AD wall
+final historyEventsProvider = StateProvider<List<EventModel>>((ref) => []);
+
 class EventNotifier extends AsyncNotifier<List<EventModel>> {
   late String matchId;
 

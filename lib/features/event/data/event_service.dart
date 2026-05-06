@@ -33,4 +33,17 @@ class EventService {
   Future<void> recallEvent(String matchId, String eventId) async {
     await _dio.post('/matches/$matchId/events/$eventId/recall');
   }
+
+  Future<EventModel?> getLatestEvent(String matchId) async {
+    // Returns the single newest 'called' event
+    final res = await _dio.get('/matches/$matchId/events/latest');
+    if (res.data == null) return null;
+    return EventModel.fromJson(res.data);
+  }
+
+  Future<List<EventModel>> getEventHistory(String matchId) async {
+    // Returns all 'called' events, sorted newest first
+    final res = await _dio.get('/matches/$matchId/events/history');
+    return (res.data as List).map((e) => EventModel.fromJson(e)).toList();
+  }
 }

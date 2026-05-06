@@ -50,11 +50,34 @@ class _CardPageState extends ConsumerState<CardPage> {
 
   // --- PLAYER VIEW ---
   Widget _buildPlayerView(MatchContext data, CardModel card) {
-    return Column(
-      children: [
-        LastCalledBar(calledNumbers: data.match.calledNumbers),
-        Expanded(child: BingoGrid(cells: card.cells)),
-      ],
+    return Scaffold(
+      // 🔥 1. Make the Scaffold transparent so our SVG background shows through
+      backgroundColor: Colors.transparent,
+
+      // 🔥 2. Move the FAB here so it floats correctly over the grid
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => _confirmBingo(context, ref, card.id, data.match.id),
+        backgroundColor: Colors.redAccent,
+        label: const Text("BINGO!"),
+        icon: const Icon(Icons.star),
+      ),
+
+      // 🔥 3. Use a Column to stack the Grid and the Bar
+      body: Column(
+        children: [
+          // Expanded makes the BingoGrid fill all available space
+          // and pushes the LastCalledBar to the bottom.
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: BingoGrid(cells: card.cells),
+            ),
+          ),
+
+          // The Bar stays pinned at the bottom above the Navigation
+          LastCalledBar(visibilitySeconds: 300, matchId: data.match.id),
+        ],
+      ),
     );
   }
 
@@ -179,6 +202,133 @@ class _CardPageState extends ConsumerState<CardPage> {
       ],
     );
   }
+}
+
+void _confirmBingo(
+  BuildContext context,
+  WidgetRef ref,
+  String cardId,
+  String matchId,
+) {
+  showDialog(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: const Text("Call Bingo?"),
+      content: const Text(
+        "Are you sure? A false Bingo might have consequences!",
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text("Wait!"),
+        ),
+        ElevatedButton(
+          onPressed: () async {
+            Navigator.pop(context); // Close confirm
+            // Perform Call
+            final result = await ref
+                .read(matchServiceProvider)
+                .callBingo(cardId, matchId);
+
+            _showResultDialog(context, result);
+          },
+          child: const Text("YES, BINGO!"),
+        ),
+      ],
+    ),
+  );
+}
+
+void _showResultDialog(BuildContext context, BingoResultDto result) {
+  final theme = Theme.of(context);
+  final colorScheme = theme.colorScheme;
+
+  showDialog(
+    context: context,
+    builder: (context) => AlertDialog(
+      // Make it slightly transparent to see the camping/party background
+      backgroundColor: theme.colorScheme.surface.withOpacity(0.9),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // 1. Icon Header
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: result.isValid
+                  ? Colors.green.withOpacity(0.1)
+                  : Colors.red.withOpacity(0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              result.isValid ? Icons.stars : Icons.warning_amber_rounded,
+              size: 64,
+              color: result.isValid ? Colors.green : Colors.red,
+            ),
+          ),
+          const SizedBox(height: 24),
+
+          // 2. The Message
+          Text(
+            result.isValid ? "BINGO!" : "FALSE ALARM",
+            style: theme.textTheme.headlineMedium?.copyWith(
+              fontWeight: FontWeight.bold,
+              color: result.isValid ? Colors.green : Colors.red,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            result.message,
+            textAlign: TextAlign.center,
+            style: theme.textTheme.bodyLarge,
+          ),
+
+          // 3. The Prize (if valid)
+          if (result.isValid && result.prize != null) ...[
+            const SizedBox(height: 20),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              decoration: BoxDecoration(
+                color: colorScheme.primaryContainer,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.card_giftcard, size: 20),
+                  const SizedBox(width: 8),
+                  Text(
+                    "Prize: ${result.prize}",
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: colorScheme.onPrimaryContainer,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+      actions: [
+        Center(
+          child: ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: result.isValid
+                  ? Colors.green
+                  : theme.disabledColor,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+            ),
+            onPressed: () => Navigator.pop(context),
+            child: Text(result.isValid ? "AWESOME!" : "BACK TO CARD"),
+          ),
+        ),
+        const SizedBox(height: 8),
+      ],
+    ),
+  );
 }
 
 void _openEventDialog(

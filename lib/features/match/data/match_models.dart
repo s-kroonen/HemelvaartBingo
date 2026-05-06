@@ -90,3 +90,21 @@ class MatchContext {
     );
   }
 }
+
+class BingoResultDto {
+  final bool isValid;
+  final String message;
+  final String? prize;
+
+  BingoResultDto({
+    required this.isValid,
+    required this.message,
+    this.prize
+  });
+
+  factory BingoResultDto.fromJson(Map<String, dynamic> json) => BingoResultDto(
+    isValid: json['isValid'] ?? false,
+    message: json['message'] ?? '',
+    prize: json['prize'],
+  );
+}
