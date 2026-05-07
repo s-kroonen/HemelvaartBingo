@@ -1,26 +1,44 @@
 // lib/features/match/data/match_models.dart
+enum BingoMode {
+  BINGO_75,
+  BINGO_90;
+
+  static BingoMode fromString(String? value) {
+    return BingoMode.values.firstWhere(
+      (e) => e.name == value,
+      orElse: () => BingoMode.BINGO_75, // Safe fallback
+    );
+  }
+}
+
+extension BingoModeExtension on BingoMode {
+  String get label {
+    switch (this) {
+      case BingoMode.BINGO_75:
+        return '75 Ball (5x5 Grid)';
+      case BingoMode.BINGO_90:
+        return '90 Ball (3x9 Grid)';
+    }
+  }
+}
 
 class MatchModel {
   final String id;
   final String name;
-  final int cardSize;
+  final BingoMode mode;
   final String status;
   final List<int> calledNumbers;
   final String roleInMatch;
-  final DateTime? startDate;
-  final DateTime? endDate;
   final int? numbersPerEvent;
   final bool? autoNumberDistribution;
 
   MatchModel({
     required this.id,
     required this.name,
-    required this.cardSize,
+    required this.mode,
     required this.status,
     required this.calledNumbers,
     required this.roleInMatch,
-    required this.startDate,
-    required this.endDate,
     required this.numbersPerEvent,
     required this.autoNumberDistribution,
   });
@@ -31,12 +49,10 @@ class MatchModel {
       return MatchModel(
         id: '',
         name: 'Unknown Match',
-        cardSize: 0,
+        mode: BingoMode.BINGO_75,
         status: 'unknown',
         calledNumbers: [],
         roleInMatch: 'player',
-        startDate: null,
-        endDate: null,
         numbersPerEvent: 1,
         autoNumberDistribution: false,
       );
@@ -45,7 +61,7 @@ class MatchModel {
     return MatchModel(
       id: json['id']?.toString() ?? '',
       name: json['name']?.toString() ?? 'Unnamed Match',
-      cardSize: json['cardSize'] is int ? json['cardSize'] : 0,
+      mode: BingoMode.fromString(json['mode']?.toString()),
       status: json['status']?.toString() ?? 'ACTIVE',
       // Safely handle the list cast
       calledNumbers:
@@ -54,12 +70,6 @@ class MatchModel {
               .toList() ??
           [],
       roleInMatch: json['roleInMatch']?.toString() ?? 'player',
-      startDate: DateTime.parse(
-        json['startDate']?.toString() ?? DateTime.january.toString(),
-      ),
-      endDate: DateTime.parse(
-        json['endDate']?.toString() ?? DateTime.january.toString(),
-      ),
       numbersPerEvent: json['numbersPerEvent'] is int
           ? json['numbersPerEvent']
           : 1,
@@ -96,11 +106,7 @@ class BingoResultDto {
   final String message;
   final String? prize;
 
-  BingoResultDto({
-    required this.isValid,
-    required this.message,
-    this.prize
-  });
+  BingoResultDto({required this.isValid, required this.message, this.prize});
 
   factory BingoResultDto.fromJson(Map<String, dynamic> json) => BingoResultDto(
     isValid: json['isValid'] ?? false,

@@ -90,7 +90,7 @@ class _CardPageState extends ConsumerState<CardPage> {
 
           // 3. The Last Called Bar pinned at the very bottom of the screen
           LastCalledBar(
-            visibilitySeconds: 300,
+            visibilitySeconds: 10,
             matchId: data.match.id,
           ),
         ],

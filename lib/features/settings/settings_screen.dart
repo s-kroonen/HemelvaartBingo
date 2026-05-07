@@ -263,15 +263,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   void _showMatchDialog({MatchModel? existingMatch}) {
     final isEditing = existingMatch != null;
     final nameController = TextEditingController(text: existingMatch?.name);
-    final cardSizeController = TextEditingController(
-      text: existingMatch?.cardSize.toString() ?? '25',
-    );
     final tokenController = TextEditingController();
 
-    // New fields from DTO
-    DateTime startDate = existingMatch?.startDate ?? DateTime.now();
-    DateTime endDate =
-        existingMatch?.endDate ?? DateTime.now().add(const Duration(days: 1));
+    // Initializing state with the Enum instead of a controller
+    // Note: Ensure MatchModel now has a 'mode' property of type BingoMode
+    BingoMode selectedMode = existingMatch?.mode ?? BingoMode.BINGO_75;
     String status = existingMatch?.status ?? 'ACTIVE';
     int numbersPerEvent = existingMatch?.numbersPerEvent ?? 1;
     bool autoDist = existingMatch?.autoNumberDistribution ?? true;
@@ -283,29 +279,19 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       builder: (dialogContext) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
           title: Text(
-            isEditing
-                ? "Edit Match"
-                : (isCreateMode ? "Create Match" : "Join Match"),
+            isEditing ? "Edit Match" : (isCreateMode ? "Create Match" : "Join Match"),
           ),
           content: SingleChildScrollView(
-            // Added for form length
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 if (!isEditing) ...[
                   ToggleButtons(
                     isSelected: [isCreateMode, !isCreateMode],
-                    onPressed: (index) =>
-                        setDialogState(() => isCreateMode = index == 0),
+                    onPressed: (index) => setDialogState(() => isCreateMode = index == 0),
                     children: const [
-                      Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 16),
-                        child: Text("Create"),
-                      ),
-                      Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 16),
-                        child: Text("Join"),
-                      ),
+                      Padding(padding: EdgeInsets.symmetric(horizontal: 16), child: Text("Create")),
+                      Padding(padding: EdgeInsets.symmetric(horizontal: 16), child: Text("Join")),
                     ],
                   ),
                   const SizedBox(height: 16),
@@ -316,47 +302,24 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     controller: nameController,
                     decoration: const InputDecoration(labelText: "Match Name"),
                   ),
-                  TextField(
-                    controller: cardSizeController,
-                    decoration: const InputDecoration(
-                      labelText: "Card Size (e.g. 25)",
-                    ),
-                    keyboardType: TextInputType.number,
-                  ),
 
-                  // Date Pickers
-                  ListTile(
-                    title: const Text("Start Date"),
-                    subtitle: Text("${startDate.toLocal()}".split(' ')[0]),
-                    trailing: const Icon(Icons.calendar_today),
-                    onTap: () async {
-                      final picked = await showDatePicker(
-                        context: context,
-                        initialDate: startDate,
-                        firstDate: DateTime(2024),
-                        lastDate: DateTime(2030),
+                  const SizedBox(height: 8),
+
+                  // 🔥 NEW DROPDOWN INSTEAD OF TEXTFIELD
+                  DropdownButtonFormField<BingoMode>(
+                    value: selectedMode,
+                    decoration: const InputDecoration(labelText: "Game Mode"),
+                    items: BingoMode.values.map((mode) {
+                      return DropdownMenuItem(
+                        value: mode,
+                        child: Text(mode.label),
                       );
-                      if (picked != null)
-                        setDialogState(() => startDate = picked);
-                    },
-                  ),
-                  ListTile(
-                    title: const Text("End Date"),
-                    subtitle: Text("${endDate.toLocal()}".split(' ')[0]),
-                    trailing: const Icon(Icons.calendar_today),
-                    onTap: () async {
-                      final picked = await showDatePicker(
-                        context: context,
-                        initialDate: endDate,
-                        firstDate: DateTime(2024),
-                        lastDate: DateTime(2030),
-                      );
-                      if (picked != null)
-                        setDialogState(() => endDate = picked);
+                    }).toList(),
+                    onChanged: (val) {
+                      if (val != null) setDialogState(() => selectedMode = val);
                     },
                   ),
 
-                  // Status Dropdown
                   DropdownButtonFormField<String>(
                     value: status,
                     items: ['ACTIVE', 'DRAFT', 'COMPLETED', 'CANCELLED']
@@ -374,9 +337,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       onChanged: (v) => setDialogState(() => autoDist = v),
                     ),
                     TextField(
-                      decoration: const InputDecoration(
-                        labelText: "Numbers Per Event",
-                      ),
+                      decoration: const InputDecoration(labelText: "Numbers Per Event"),
                       keyboardType: TextInputType.number,
                       onChanged: (v) => numbersPerEvent = int.tryParse(v) ?? 1,
                     ),
@@ -392,53 +353,37 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ),
           ),
           actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text("Cancel"),
-            ),
+            TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancel")),
             ElevatedButton(
               onPressed: () async {
                 final service = ref.read(matchServiceProvider);
-                final scaffoldMessenger = ScaffoldMessenger.of(context);
-                final navigator = Navigator.of(context);
+                final messenger = ScaffoldMessenger.of(context);
+                final nav = Navigator.of(context);
 
                 try {
+                  // Map of data to send to Backend
+                  final matchData = {
+                    "name": nameController.text,
+                    "mode": selectedMode.name, // 🔥 Sends "BINGO_75" or "BINGO_90"
+                    "status": status,
+                    "numbersPerEvent": numbersPerEvent,
+                    "autoNumberDistribution": autoDist,
+                  };
+
                   if (isEditing) {
-                    await service.updateMatch(existingMatch.id, {
-                      "name": nameController.text,
-                      "startDate": startDate.toIso8601String(),
-                      "endDate": endDate.toIso8601String(),
-                      "cardSize": int.tryParse(cardSizeController.text) ?? 25,
-                      "status": status,
-                      "numbersPerEvent": numbersPerEvent,
-                      "autoNumberDistribution": autoDist,
-                    });
+                    await service.updateMatch(existingMatch.id, matchData);
                   } else if (isCreateMode) {
-                    await service.createMatch({
-                      "name": nameController.text,
-                      "startDate": startDate.toIso8601String(),
-                      "endDate": endDate.toIso8601String(),
-                      "cardSize": int.tryParse(cardSizeController.text) ?? 25,
-                      "status": status,
-                    });
-                  } else {
-                    // await service.joinMatch(tokenController.text);
+                    await service.createMatch(matchData);
                   }
 
-                  // 🔥 KEY FIX: Invalidate and await the refresh
                   ref.invalidate(allMatchesProvider);
                   await ref.read(allMatchesProvider.future);
 
-                  if (mounted) navigator.pop();
-                  scaffoldMessenger.showSnackBar(
-                    const SnackBar(content: Text("Success!")),
-                  );
+                  if (mounted) nav.pop();
+                  messenger.showSnackBar(const SnackBar(content: Text("Success!")));
                 } catch (e) {
-                  scaffoldMessenger.showSnackBar(
-                    SnackBar(
-                      content: Text("Error: $e"),
-                      backgroundColor: Colors.red,
-                    ),
+                  messenger.showSnackBar(
+                    SnackBar(content: Text("Error: $e"), backgroundColor: Colors.red),
                   );
                 }
               },
