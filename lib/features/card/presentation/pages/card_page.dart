@@ -8,6 +8,7 @@ import '../../data/card_model.dart';
 import '../../providers/card_provider.dart';
 import '../widgets/bingo_grid.dart';
 import '../widgets/last_called_bar.dart';
+import 'package:showcaseview/showcaseview.dart';
 
 class CardPage extends ConsumerStatefulWidget {
   const CardPage({super.key});
@@ -18,6 +19,87 @@ class CardPage extends ConsumerStatefulWidget {
 
 class _CardPageState extends ConsumerState<CardPage> {
   String _searchQuery = ''; // Moved to state so UI updates when typing
+  final _gridKey = GlobalKey();
+  final _bingoButtonKey = GlobalKey();
+  final _lastCalledKey = GlobalKey();
+
+  // Master
+  final _masterHeaderKey = GlobalKey();
+  final _createEventKey = GlobalKey();
+  final _eventItemKey = GlobalKey();
+  final _callButtonKey = GlobalKey();
+
+  @override
+  void initState() {
+    super.initState();
+    // Register the showcase view
+    ShowcaseView.register(
+      autoPlayDelay: const Duration(seconds: 3),
+      semanticEnable: true, // Enable accessibility support globally
+      globalFloatingActionWidget: (showcaseContext) => FloatingActionWidget(
+        left: 16,
+        bottom: 16,
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: ElevatedButton(
+            onPressed: () => ShowcaseView.get().dismiss(),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xffEE5366),
+            ),
+            child: const Text(
+              'Skip',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 15,
+              ),
+            ),
+          ),
+        ),
+      ),
+      globalTooltipActionConfig: const TooltipActionConfig(
+        position: TooltipActionPosition.inside,
+        alignment: MainAxisAlignment.spaceBetween,
+        actionGap: 20,
+      ),
+      globalTooltipActions: [
+        TooltipActionButton(
+          type: TooltipDefaultActionType.previous,
+          textStyle: const TextStyle(
+            color: Colors.white,
+          ),
+          // Here we don't need previous action for the first showcase widget
+          // so we hide this action for the first showcase widget
+          hideActionWidgetForShowcase: [_gridKey],
+        ),
+        TooltipActionButton(
+          type: TooltipDefaultActionType.next,
+          textStyle: const TextStyle(
+            color: Colors.white,
+          ),
+          // Here we don't need next action for the last showcase widget so we
+          // hide this action for the last showcase widget
+          hideActionWidgetForShowcase: [_lastCalledKey],
+        ),
+      ],
+    );
+
+    debugPrint("registerd showcase");
+    // Start showcase after the screen is rendered to ensure internal initialization.
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) => ShowcaseView.get().startShowCase([
+        _gridKey,
+        _bingoButtonKey,
+        _lastCalledKey,
+      ], delay: Duration(milliseconds: 500)),
+    );
+  }
+
+  @override
+  void dispose() {
+    // Unregister the showcase view
+    ShowcaseView.get().unregister();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -58,7 +140,12 @@ class _CardPageState extends ConsumerState<CardPage> {
           Expanded(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(8, 8, 8, 0),
-              child: BingoGrid(cells: card.cells),
+              child: Showcase(
+                key: _gridKey,
+                description:
+                    "This is your bingo card. Tap cells to mark numbers yourself—nothing is filled automatically.",
+                child: BingoGrid(cells: card.cells),
+              ),
             ),
           ),
 
@@ -67,31 +154,42 @@ class _CardPageState extends ConsumerState<CardPage> {
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 20),
             child: Center(
-              child: ElevatedButton.icon(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.redAccent,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 16),
-                  textStyle: const TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 1.2,
+              child: Showcase(
+                key: _bingoButtonKey,
+                description:
+                    "Think you have bingo? Press this! You'll need to confirm—false calls may have consequences.",
+                child: ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.redAccent,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 48,
+                      vertical: 16,
+                    ),
+                    textStyle: const TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 1.2,
+                    ),
+                    elevation: 6,
+                    shape: const StadiumBorder(),
+                    // Makes it pill-shaped
+                    shadowColor: Colors.red.withOpacity(0.5),
                   ),
-                  elevation: 6,
-                  shape: const StadiumBorder(), // Makes it pill-shaped
-                  shadowColor: Colors.red.withOpacity(0.5),
+                  onPressed: () =>
+                      _confirmBingo(context, ref, card.id, data.match.id),
+                  icon: const Icon(Icons.star, color: Colors.yellow, size: 28),
+                  label: const Text("BINGO!"),
                 ),
-                onPressed: () => _confirmBingo(context, ref, data.match.id, card.id),
-                icon: const Icon(Icons.star, color: Colors.yellow, size: 28),
-                label: const Text("BINGO!"),
               ),
             ),
           ),
-
           // 3. The Last Called Bar pinned at the very bottom of the screen
-          LastCalledBar(
-            visibilitySeconds: 10,
-            matchId: data.match.id,
+          Showcase(
+            key: _lastCalledKey,
+            description:
+                "Latest number appears here briefly. Want history? You can view it by watching an ad.",
+            child: LastCalledBar(visibilitySeconds: 10, matchId: data.match.id),
           ),
         ],
       ),

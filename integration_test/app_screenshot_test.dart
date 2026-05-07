@@ -30,7 +30,7 @@ class DemoMatchNotifier extends CurrentMatchNotifier {
         id: "demo",
         calledNumbers: [12, 34, 56],
         name: "Demo Match",
-        mode: 5,
+        mode: BingoMode.BINGO_75,
         status: "active", roleInMatch: '', numbersPerEvent: null, autoNumberDistribution: null,
       ),
       roleInMatch: "player", // change to "master" for master test
@@ -140,7 +140,7 @@ void main() {
                   id: "demo",
                   name: "Demo Match",
                   calledNumbers: [12, 34],
-                  mode: 5,
+                  mode: BingoMode.BINGO_75,
                   status: "active", roleInMatch: '', numbersPerEvent: null, autoNumberDistribution: null,
                 ),
               ];
