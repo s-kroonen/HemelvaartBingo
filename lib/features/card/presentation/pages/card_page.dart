@@ -51,31 +51,48 @@ class _CardPageState extends ConsumerState<CardPage> {
   // --- PLAYER VIEW ---
   Widget _buildPlayerView(MatchContext data, CardModel card) {
     return Scaffold(
-      // 🔥 1. Make the Scaffold transparent so our SVG background shows through
       backgroundColor: Colors.transparent,
-
-      // 🔥 2. Move the FAB here so it floats correctly over the grid
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _confirmBingo(context, ref, card.id, data.match.id),
-        backgroundColor: Colors.redAccent,
-        label: const Text("BINGO!"),
-        icon: const Icon(Icons.star),
-      ),
-
-      // 🔥 3. Use a Column to stack the Grid and the Bar
       body: Column(
         children: [
-          // Expanded makes the BingoGrid fill all available space
-          // and pushes the LastCalledBar to the bottom.
+          // 1. The Grid takes all available top space
           Expanded(
             child: Padding(
-              padding: const EdgeInsets.all(8.0),
+              padding: const EdgeInsets.fromLTRB(8, 8, 8, 0),
               child: BingoGrid(cells: card.cells),
             ),
           ),
 
-          // The Bar stays pinned at the bottom above the Navigation
-          LastCalledBar(visibilitySeconds: 300, matchId: data.match.id),
+          // 2. The "BINGO!" Button centered horizontally
+          // We add some padding to give it breathing room from the grid and the bar
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 20),
+            child: Center(
+              child: ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.redAccent,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 16),
+                  textStyle: const TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 1.2,
+                  ),
+                  elevation: 6,
+                  shape: const StadiumBorder(), // Makes it pill-shaped
+                  shadowColor: Colors.red.withOpacity(0.5),
+                ),
+                onPressed: () => _confirmBingo(context, ref, data.match.id, card.id),
+                icon: const Icon(Icons.star, color: Colors.yellow, size: 28),
+                label: const Text("BINGO!"),
+              ),
+            ),
+          ),
+
+          // 3. The Last Called Bar pinned at the very bottom of the screen
+          LastCalledBar(
+            visibilitySeconds: 300,
+            matchId: data.match.id,
+          ),
         ],
       ),
     );

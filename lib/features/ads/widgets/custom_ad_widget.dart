@@ -58,7 +58,7 @@ class _CustomAdWidgetState extends State<CustomAdWidget> {
         const SizedBox(height: 10),
         ElevatedButton(
           onPressed: _timeLeft == 0 ? widget.onComplete : null,
-          child: Text(_timeLeft > 0 ? "Wait $_timeLeft..." : "Continue to Match"),
+          child: Text(_timeLeft > 0 ? "Wait $_timeLeft..." : "Continue"),
         ),
       ],
     );

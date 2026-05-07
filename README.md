@@ -1,6 +1,6 @@
 # hemelvaartbingo
 
-A new Flutter project.
+The bingo app of the vaart.
 
 ## Getting Started
 
