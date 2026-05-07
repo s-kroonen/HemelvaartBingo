@@ -43,7 +43,7 @@ class ThemedBackground extends ConsumerWidget {
     switch (style) {
       case AppThemeStyle.camping:
         return SvgPicture.asset(
-          'camping.svg',
+          'assets/camping.svg',
           fit: BoxFit.fitWidth,
           alignment: Alignment.bottomCenter, // Sits at the bottom of the screen
           colorFilter: ColorFilter.mode(
@@ -53,7 +53,7 @@ class ThemedBackground extends ConsumerWidget {
         );
       case AppThemeStyle.party:
         return SvgPicture.asset(
-          'party.svg',
+          'assets/party.svg',
           fit: BoxFit.contain,
           alignment: Alignment.topRight,
           // Lights/decorations usually look better at the top
