@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hemelvaartbingo/features/user/data/user_model.dart';
+import '../../../../core/network/api_client.dart';
 import '../../../event/data/event_model.dart';
 import '../../../event/providers/event_provider.dart';
 import '../../../match/data/match_models.dart';
@@ -178,23 +179,14 @@ class _CardPageState extends ConsumerState<CardPage> {
                 },
                 loading: () => const Center(child: CircularProgressIndicator()),
                 error: (e, _) {
-                  return Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(Icons.casino, size: 64),
-                        const SizedBox(height: 16),
-                        const Text("You don't have a card yet"),
-                        const SizedBox(height: 8),
-                        // ElevatedButton(
-                        //   onPressed: () {
-                        //     // navigate to join/create
-                        //   },
-                        //   child: const Text("Join or Create Match"),
-                        // ),
-                      ],
-                    ),
-                  );
+                  if (e is AppError) {
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      showAppError(context, e);
+                    });
+                    return const SizedBox();
+                  }
+
+                  return Text("Unexpected error");
                 },
               );
             }

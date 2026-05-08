@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:hemelvaartbingo/core/network/api_client.dart';
 import 'package:hemelvaartbingo/features/card/data/card_model.dart';
 
 class CardService {
@@ -14,8 +15,10 @@ class CardService {
 
   // Fetch the specific context (Match + Role)
   Future<CardModel> fetchMyCard(String matchId) async {
-    final response = await _dio.get('/cards/my-card');
-    return CardModel.fromJson(response.data);
+    return safeRequest(() async {
+      final response = await _dio.get('/cards/my-card');
+      return CardModel.fromJson(response.data);
+    });
   }
 
   Future<CardModel> fetchMyCurrentCard() async {

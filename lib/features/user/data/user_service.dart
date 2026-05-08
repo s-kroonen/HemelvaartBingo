@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import '../../../core/network/api_client.dart';
 import '../data/user_model.dart';
 
 // lib/features/user/data/user_service.dart
@@ -8,8 +9,10 @@ class UserService {
   UserService(this._dio);
 
   Future<UserModel> getMe() async {
-    final res = await _dio.get('/users/me');
-    return UserModel.fromJson(res.data);
+    return safeRequest(() async {
+      final res = await _dio.get('/users/me');
+      return UserModel.fromJson(res.data);
+    });
   }
 
   Future<void> updateCurrentMatch(String matchId) async {
