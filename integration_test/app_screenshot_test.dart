@@ -31,7 +31,10 @@ class DemoMatchNotifier extends CurrentMatchNotifier {
         calledNumbers: [12, 34, 56],
         name: "Demo Match",
         mode: BingoMode.BINGO_75,
-        status: "active", roleInMatch: '', numbersPerEvent: null, autoNumberDistribution: null,
+        status: "active",
+        roleInMatch: '',
+        numbersPerEvent: null,
+        autoNumberDistribution: null,
       ),
       roleInMatch: "player", // change to "master" for master test
     );
@@ -53,6 +56,7 @@ class DemoUserProvider extends AsyncNotifier<UserModel> {
         newsletter: false,
         testerProgram: false,
       ),
+      tutorials: Tutorials(playerSeen: true, masterSeen: true),
       // add required fields here
     );
   }
@@ -130,6 +134,7 @@ void main() {
                   newsletter: false,
                   testerProgram: false,
                 ),
+                tutorials: Tutorials(playerSeen: true, masterSeen: true),
               );
             }),
 
@@ -141,7 +146,10 @@ void main() {
                   name: "Demo Match",
                   calledNumbers: [12, 34],
                   mode: BingoMode.BINGO_75,
-                  status: "active", roleInMatch: '', numbersPerEvent: null, autoNumberDistribution: null,
+                  status: "active",
+                  roleInMatch: '',
+                  numbersPerEvent: null,
+                  autoNumberDistribution: null,
                 ),
               ];
             }),

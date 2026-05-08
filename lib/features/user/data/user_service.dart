@@ -21,4 +21,13 @@ class UserService {
   Future<void> updateProfile(Map<String, dynamic> map) async {
     await _dio.put("/users/me", data: map);
   }
+
+  Future<void> completeTutorial(String s) async {
+    // We wrap the field inside a 'tutorials' map to match the backend structure
+    final updateData = {
+      "tutorials": {s: true},
+    };
+
+    return await updateProfile(updateData);
+  }
 }

@@ -1,5 +1,7 @@
 // lib/features/card/data/card_models.dart
 
+import 'package:flutter/material.dart';
+
 class CellModel {
   final String id;
   final String value;
@@ -31,6 +33,11 @@ class CellModel {
       position: position,
     );
   }
+
+  static List<CellModel> mockList() => List.generate(
+    25,
+    (i) => CellModel(id: "$i", position: i, value: "$i", isChecked: i % 3 == 0),
+  );
 }
 
 class CardModel {
@@ -43,7 +50,7 @@ class CardModel {
     required this.id,
     required this.matchId,
     required this.userId,
-    required this.cells
+    required this.cells,
   });
 
   factory CardModel.fromJson(Map<String, dynamic> json) {
@@ -51,10 +58,20 @@ class CardModel {
       id: json['id'] ?? '',
       matchId: json['matchId'] ?? '',
       userId: json['userId'] ?? '',
-      cells: (json['cells'] as List? ?? [])
-          .map((e) => CellModel.fromJson(e))
-          .toList()
-        ..sort((a, b) => a.position.compareTo(b.position)), // Ensure grid order
+      cells:
+          (json['cells'] as List? ?? [])
+              .map((e) => CellModel.fromJson(e))
+              .toList()
+            ..sort(
+              (a, b) => a.position.compareTo(b.position),
+            ), // Ensure grid order
     );
   }
+
+  static CardModel mock() => CardModel(
+    id: "",
+    matchId: "matchId",
+    userId: "userId",
+    cells: CellModel.mockList(),
+  );
 }

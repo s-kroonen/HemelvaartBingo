@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:hemelvaartbingo/features/user/data/user_model.dart';
 import '../../../event/data/event_model.dart';
 import '../../../event/providers/event_provider.dart';
 import '../../../match/data/match_models.dart';
 import '../../../match/providers/match_provider.dart';
+import '../../../user/providers/user_provider.dart';
 import '../../data/card_model.dart';
 import '../../providers/card_provider.dart';
 import '../widgets/bingo_grid.dart';
@@ -19,6 +21,10 @@ class CardPage extends ConsumerStatefulWidget {
 
 class _CardPageState extends ConsumerState<CardPage> {
   String _searchQuery = ''; // Moved to state so UI updates when typing
+  bool _isTutorial = false;
+  bool _tutorialStarted = false;
+  bool? _localPlayerSeen;
+  bool? _localMasterSeen;
   final _gridKey = GlobalKey();
   final _bingoButtonKey = GlobalKey();
   final _lastCalledKey = GlobalKey();
@@ -35,27 +41,7 @@ class _CardPageState extends ConsumerState<CardPage> {
     // Register the showcase view
     ShowcaseView.register(
       autoPlayDelay: const Duration(seconds: 3),
-      semanticEnable: true, // Enable accessibility support globally
-      globalFloatingActionWidget: (showcaseContext) => FloatingActionWidget(
-        left: 16,
-        bottom: 16,
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: ElevatedButton(
-            onPressed: () => ShowcaseView.get().dismiss(),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xffEE5366),
-            ),
-            child: const Text(
-              'Skip',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 15,
-              ),
-            ),
-          ),
-        ),
-      ),
+      semanticEnable: true,
       globalTooltipActionConfig: const TooltipActionConfig(
         position: TooltipActionPosition.inside,
         alignment: MainAxisAlignment.spaceBetween,
@@ -64,34 +50,33 @@ class _CardPageState extends ConsumerState<CardPage> {
       globalTooltipActions: [
         TooltipActionButton(
           type: TooltipDefaultActionType.previous,
-          textStyle: const TextStyle(
-            color: Colors.white,
-          ),
+          textStyle: const TextStyle(color: Colors.white),
           // Here we don't need previous action for the first showcase widget
           // so we hide this action for the first showcase widget
-          hideActionWidgetForShowcase: [_gridKey],
+          hideActionWidgetForShowcase: [_gridKey, _masterHeaderKey],
+        ),
+        TooltipActionButton(
+          type: TooltipDefaultActionType.skip,
+          textStyle: const TextStyle(color: Colors.white),
+          backgroundColor: Colors.red,
+          hideActionWidgetForShowcase: [_lastCalledKey, _callButtonKey],
         ),
         TooltipActionButton(
           type: TooltipDefaultActionType.next,
-          textStyle: const TextStyle(
-            color: Colors.white,
-          ),
+          textStyle: const TextStyle(color: Colors.white),
           // Here we don't need next action for the last showcase widget so we
           // hide this action for the last showcase widget
-          hideActionWidgetForShowcase: [_lastCalledKey],
+          hideActionWidgetForShowcase: [_lastCalledKey, _callButtonKey],
         ),
       ],
     );
+    ShowcaseView.get().addOnFinishCallback(() async {
+      await _completeTutorial();
+    });
 
-    debugPrint("registerd showcase");
-    // Start showcase after the screen is rendered to ensure internal initialization.
-    WidgetsBinding.instance.addPostFrameCallback(
-      (_) => ShowcaseView.get().startShowCase([
-        _gridKey,
-        _bingoButtonKey,
-        _lastCalledKey,
-      ], delay: Duration(milliseconds: 500)),
-    );
+    ShowcaseView.get().addOnDismissCallback((_) async {
+      await _completeTutorial();
+    });
   }
 
   @override
@@ -101,31 +86,142 @@ class _CardPageState extends ConsumerState<CardPage> {
     super.dispose();
   }
 
+  void _startTutorial(MatchContext matchContext, UserModel user) {
+    if (_tutorialStarted) return;
+
+    final isMaster = matchContext.roleInMatch == "master";
+
+    final seen = isMaster
+        ? (_localMasterSeen ?? user.tutorials.masterSeen)
+        : (_localPlayerSeen ?? user.tutorials.playerSeen);
+
+    if (seen) return;
+
+    _tutorialStarted = true;
+    _isTutorial = true;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (isMaster) {
+        ShowcaseView.get().startShowCase([
+          _masterHeaderKey,
+          _createEventKey,
+          _eventItemKey,
+          _callButtonKey,
+        ]);
+      } else {
+        ShowcaseView.get().startShowCase([
+          _gridKey,
+          _bingoButtonKey,
+          _lastCalledKey,
+        ]);
+      }
+    });
+  }
+
+  Future<void> _completeTutorial() async {
+    if (!_isTutorial) return;
+
+    final match = ref.read(currentMatchProvider).value;
+    if (match == null) return;
+
+    final isMaster = match.roleInMatch == "master";
+
+    setState(() {
+      _isTutorial = false;
+      _tutorialStarted = false;
+
+      if (isMaster) {
+        _localMasterSeen = true;
+      } else {
+        _localPlayerSeen = true;
+      }
+    });
+
+    try {
+      await ref
+          .read(userServiceProvider)
+          .completeTutorial(isMaster ? "masterSeen" : "playerSeen");
+
+      // refresh silently
+      ref.invalidate(userProvider);
+      // ref.invalidate(currentMatchProvider);
+    } catch (e) {
+      debugPrint("Failed to save tutorial state: $e");
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final contextAsync = ref.watch(currentMatchProvider);
-
+    final userAsync = ref.watch(userProvider);
     return Scaffold(
       backgroundColor: Colors.transparent,
       appBar: AppBar(title: const Text("Game Session"), centerTitle: true),
-      body: contextAsync.when(
-        data: (matchContext) {
-          // 1. Check Role
-          if (matchContext.roleInMatch == "master") {
-            return _buildMasterView(context, matchContext);
-          } else {
-            // 2. If Player, watch the Card Provider
-            final cardAsync = ref.watch(currentCardProvider);
+      body: userAsync.when(
+        data: (user) => contextAsync.when(
+          data: (matchContext) {
+            // 1. Check Role
+            if (matchContext.roleInMatch == "master") {
+              _startTutorial(matchContext, user);
+              return _buildMasterView(context, matchContext);
+            } else {
+              // 2. If Player, watch the Card Provider
+              final cardAsync = ref.watch(currentCardProvider);
 
-            return cardAsync.when(
-              data: (card) => _buildPlayerView(matchContext, card),
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (e, _) => Center(child: Text("Card Error: $e")),
+              return cardAsync.when(
+                data: (card) {
+                  _startTutorial(matchContext, user);
+                  final card = _isTutorial
+                      ? CardModel.mock()
+                      : cardAsync.value!;
+                  return _buildPlayerView(matchContext, card);
+                },
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (e, _) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.casino, size: 64),
+                        const SizedBox(height: 16),
+                        const Text("You don't have a card yet"),
+                        const SizedBox(height: 8),
+                        // ElevatedButton(
+                        //   onPressed: () {
+                        //     // navigate to join/create
+                        //   },
+                        //   child: const Text("Join or Create Match"),
+                        // ),
+                      ],
+                    ),
+                  );
+                },
+              );
+            }
+          },
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (e, _) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.casino, size: 64),
+                  const SizedBox(height: 16),
+                  const Text("You're not in a match yet"),
+                  const SizedBox(height: 8),
+                  // ElevatedButton(
+                  //   onPressed: () {
+                  //     // navigate to join/create
+                  //   },
+                  //   child: const Text("Join or Create Match"),
+                  // ),
+                ],
+              ),
             );
-          }
-        },
+          },
+        ),
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text("Match Error: $e")),
+        error: (e, _) => Center(child: Text("User Error: $e")),
       ),
     );
   }
@@ -202,14 +298,19 @@ class _CardPageState extends ConsumerState<CardPage> {
 
     return Column(
       children: [
-        Container(
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          width: double.infinity,
-          color: Colors.amber.withOpacity(0.1),
-          child: const Text(
-            "MASTER EVENT CONTROL",
-            textAlign: TextAlign.center,
-            style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1.2),
+        Showcase(
+          key: _masterHeaderKey,
+          description:
+              "You're the master! You control events and number calling in this match.",
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            width: double.infinity,
+            color: Colors.amber.withOpacity(0.1),
+            child: const Text(
+              "MASTER EVENT CONTROL",
+              textAlign: TextAlign.center,
+              style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1.2),
+            ),
           ),
         ),
 
@@ -228,9 +329,15 @@ class _CardPageState extends ConsumerState<CardPage> {
                 ),
               ),
               const SizedBox(width: 10),
-              FloatingActionButton.small(
-                onPressed: () => _openEventDialog(context, ref, data.match.id),
-                child: const Icon(Icons.add),
+              Showcase(
+                key: _createEventKey,
+                description:
+                    "Create events here. Enable auto-call to instantly call a number when created.",
+                child: FloatingActionButton.small(
+                  onPressed: () =>
+                      _openEventDialog(context, ref, data.match.id),
+                  child: const Icon(Icons.add),
+                ),
               ),
             ],
           ),
@@ -239,6 +346,9 @@ class _CardPageState extends ConsumerState<CardPage> {
         Expanded(
           child: eventsAsync.when(
             data: (events) {
+              final events = _isTutorial
+                  ? EventModel.mockList()
+                  : eventsAsync.value ?? [];
               final filtered = events
                   .where(
                     (e) => e.name.toLowerCase().contains(
@@ -256,54 +366,67 @@ class _CardPageState extends ConsumerState<CardPage> {
                 itemCount: filtered.length,
                 itemBuilder: (context, i) {
                   final event = filtered[i];
-                  return Card(
-                    child: ListTile(
-                      title: Text(
-                        event.name,
-                        style: const TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      subtitle: Text(
-                        event.called
-                            ? "Called Numbers: ${event.numbers}"
-                            : "Status: Waiting",
-                      ),
-                      trailing: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          IconButton(
-                            icon: Icon(
-                              event.called ? Icons.undo : Icons.casino,
-                              color: event.called
-                                  ? Colors.orange
-                                  : Colors.green,
+                  final isFirst = i == 0;
+                  return Showcase(
+                    key: isFirst ? _eventItemKey : GlobalKey(),
+                    description: isFirst
+                        ? "Events define when numbers get called—for example: 'someone repeats a joke'."
+                        : "",
+                    child: Card(
+                      child: ListTile(
+                        title: Text(
+                          event.name,
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        subtitle: Text(
+                          event.called
+                              ? "Called Numbers: ${event.numbers}"
+                              : "Status: Waiting",
+                        ),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Showcase(
+                              key: isFirst ? _callButtonKey : GlobalKey(),
+                              description: isFirst
+                                  ? "Call a number to send it to players. Recall removes it again."
+                                  : "",
+                              child: IconButton(
+                                icon: Icon(
+                                  event.called ? Icons.undo : Icons.casino,
+                                  color: event.called
+                                      ? Colors.orange
+                                      : Colors.green,
+                                ),
+                                onPressed: () => event.called
+                                    ? ref
+                                          .read(eventProvider.notifier)
+                                          .recallEvent(event.id)
+                                    : ref
+                                          .read(eventProvider.notifier)
+                                          .callEvent(event.id),
+                              ),
                             ),
-                            onPressed: () => event.called
-                                ? ref
-                                      .read(eventProvider.notifier)
-                                      .recallEvent(event.id)
-                                : ref
-                                      .read(eventProvider.notifier)
-                                      .callEvent(event.id),
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.edit),
-                            onPressed: () => _openEventDialog(
-                              context,
-                              ref,
-                              data.match.id,
-                              event,
+                            IconButton(
+                              icon: const Icon(Icons.edit),
+                              onPressed: () => _openEventDialog(
+                                context,
+                                ref,
+                                data.match.id,
+                                event,
+                              ),
                             ),
-                          ),
-                          IconButton(
-                            icon: const Icon(
-                              Icons.delete,
-                              color: Colors.redAccent,
+                            IconButton(
+                              icon: const Icon(
+                                Icons.delete,
+                                color: Colors.redAccent,
+                              ),
+                              onPressed: () => ref
+                                  .read(eventProvider.notifier)
+                                  .deleteEvent(event.id),
                             ),
-                            onPressed: () => ref
-                                .read(eventProvider.notifier)
-                                .deleteEvent(event.id),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
                   );

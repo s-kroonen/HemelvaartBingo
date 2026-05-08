@@ -22,4 +22,13 @@ class EventModel {
       numbers: List<int>.from(json['numbers'] ?? []),
     );
   }
+  static List<EventModel> mockList() => [
+    EventModel(
+      id: "1",
+      name: "Someone repeats a joke",
+      description: "",
+      called: false,
+      numbers: [],
+    ),
+  ];
 }
