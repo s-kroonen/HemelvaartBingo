@@ -56,11 +56,13 @@ class Tutorials {
 }
 
 class UserSettings {
+  final bool notificationsEnabled;
   final bool emailNotifications;
   final bool newsletter;
   final bool testerProgram;
 
   UserSettings({
+    required this.notificationsEnabled,
     required this.emailNotifications,
     required this.newsletter,
     required this.testerProgram,
@@ -70,6 +72,7 @@ class UserSettings {
     // If the whole metadata object is missing from backend
     if (json == null) {
       return UserSettings(
+        notificationsEnabled: false,
         emailNotifications: false,
         testerProgram: false,
         newsletter: false,
@@ -77,6 +80,7 @@ class UserSettings {
     }
 
     return UserSettings(
+      notificationsEnabled: json['notificationsEnabled'] ?? false,
       emailNotifications: json['emailNotifications'] ?? false,
       newsletter: json['newsletter'] ?? false,
       testerProgram: json['testerProgram'] ?? false,

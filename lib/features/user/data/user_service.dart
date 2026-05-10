@@ -33,4 +33,6 @@ class UserService {
 
     return await updateProfile(updateData);
   }
+
+  Future<void> updateUserTokens(String token) async {}
 }

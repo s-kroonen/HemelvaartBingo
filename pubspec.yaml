@@ -47,6 +47,7 @@ dependencies:
   app_links: ^7.0.0
   flutter_svg: ^2.2.4
   showcaseview: ^5.0.2
+  web: ^1.1.1
 
 flutter_icons:
   android: true

@@ -1,21 +1,33 @@
 // lib/core/main_screen.dart
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hemelvaartbingo/features/settings/settings_screen.dart';
 import '../features/card/presentation/pages/card_page.dart';
 import '../features/user/presentation/profile_screen.dart';
+import '../services/notification.manager.dart';
+import '../shared/providers/update_provider.dart';
 import '../shared/widgets/main_navigation.dart';
 import '../shared/widgets/themed_background.dart';
 
-class MainScreen extends StatefulWidget {
+class MainScreen extends ConsumerStatefulWidget {
   const MainScreen({super.key});
 
   @override
-  State<MainScreen> createState() => _MainScreenState();
+  ConsumerState<MainScreen> createState() => _MainScreenState();
 }
 
-class _MainScreenState extends State<MainScreen> {
+class _MainScreenState extends ConsumerState<MainScreen> {
   int currentIndex = 1;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      // Access the provider directly
+      ref.read(notificationServiceProvider).checkPermissionOnStartup(context);
+    });
+  }
 
   final pages = const [
     ProfileScreen(),
@@ -26,15 +38,35 @@ class _MainScreenState extends State<MainScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final hasUpdate = ref.watch(updateProvider);
     return Scaffold(
-      body: ThemedBackground(
-        child: pages[currentIndex],
-      ),
+      appBar: hasUpdate
+          ? AppBar(
+              backgroundColor: Colors.orangeAccent,
+              title: const Text(
+                "New Version Available!",
+                style: TextStyle(fontSize: 14),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () =>
+                      ref.read(updateProvider.notifier).activateUpdate(),
+                  child: const Text(
+                    "UPDATE NOW",
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+              toolbarHeight: 40,
+            )
+          : null,
+      body: ThemedBackground(child: pages[currentIndex]),
       bottomNavigationBar: MainNavigation(
         currentIndex: currentIndex,
-        onTap: (index) {
-          setState(() => currentIndex = index);
-        },
+        onTap: (index) => setState(() => currentIndex = index),
       ),
     );
   }

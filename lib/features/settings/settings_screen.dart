@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:hemelvaartbingo/services/notification.manager.dart';
 
 import '../../shared/providers/theme_provider.dart';
 import '../match/data/match_models.dart';
@@ -37,6 +38,23 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             Card(
               child: Column(
                 children: [
+                  CheckboxListTile(
+                    title: Text("Push Notifications"),
+                    value:
+                        user.settings.notificationsEnabled,
+                    // Check NotificationSettings status
+                    onChanged: (value) async {
+                      if (value!) {
+                        await ref
+                            .read(notificationServiceProvider)
+                            .requestAndRegister();
+
+                      } else {
+                        // Optional: Logic to remove token from backend
+                      }
+                      _updateUserField('notificationsEnabled', value);
+                    },
+                  ),
                   CheckboxListTile(
                     title: const Text("Email Notifications"),
                     value: user.settings.emailNotifications,
@@ -279,7 +297,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       builder: (dialogContext) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
           title: Text(
-            isEditing ? "Edit Match" : (isCreateMode ? "Create Match" : "Join Match"),
+            isEditing
+                ? "Edit Match"
+                : (isCreateMode ? "Create Match" : "Join Match"),
           ),
           content: SingleChildScrollView(
             child: Column(
@@ -288,10 +308,17 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 if (!isEditing) ...[
                   ToggleButtons(
                     isSelected: [isCreateMode, !isCreateMode],
-                    onPressed: (index) => setDialogState(() => isCreateMode = index == 0),
+                    onPressed: (index) =>
+                        setDialogState(() => isCreateMode = index == 0),
                     children: const [
-                      Padding(padding: EdgeInsets.symmetric(horizontal: 16), child: Text("Create")),
-                      Padding(padding: EdgeInsets.symmetric(horizontal: 16), child: Text("Join")),
+                      Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 16),
+                        child: Text("Create"),
+                      ),
+                      Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 16),
+                        child: Text("Join"),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 16),
@@ -337,7 +364,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       onChanged: (v) => setDialogState(() => autoDist = v),
                     ),
                     TextField(
-                      decoration: const InputDecoration(labelText: "Numbers Per Event"),
+                      decoration: const InputDecoration(
+                        labelText: "Numbers Per Event",
+                      ),
                       keyboardType: TextInputType.number,
                       onChanged: (v) => numbersPerEvent = int.tryParse(v) ?? 1,
                     ),
@@ -353,7 +382,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ),
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancel")),
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("Cancel"),
+            ),
             ElevatedButton(
               onPressed: () async {
                 final service = ref.read(matchServiceProvider);
@@ -364,7 +396,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   // Map of data to send to Backend
                   final matchData = {
                     "name": nameController.text,
-                    "mode": selectedMode.name, // 🔥 Sends "BINGO_75" or "BINGO_90"
+                    "mode": selectedMode.name,
+                    // 🔥 Sends "BINGO_75" or "BINGO_90"
                     "status": status,
                     "numbersPerEvent": numbersPerEvent,
                     "autoNumberDistribution": autoDist,
@@ -380,10 +413,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   await ref.read(allMatchesProvider.future);
 
                   if (mounted) nav.pop();
-                  messenger.showSnackBar(const SnackBar(content: Text("Success!")));
+                  messenger.showSnackBar(
+                    const SnackBar(content: Text("Success!")),
+                  );
                 } catch (e) {
                   messenger.showSnackBar(
-                    SnackBar(content: Text("Error: $e"), backgroundColor: Colors.red),
+                    SnackBar(
+                      content: Text("Error: $e"),
+                      backgroundColor: Colors.red,
+                    ),
                   );
                 }
               },
