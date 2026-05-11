@@ -16,24 +16,11 @@ class ApiClient {
           baseUrl: apiBaseUrl,
           connectTimeout: const Duration(seconds: 10),
           receiveTimeout: const Duration(seconds: 10),
-          sendTimeout: const Duration(seconds: 10),
-          validateStatus: (status) => status != null && status < 500,
+          headers: {
+            'Accept': 'application/json',
+          },
         ),
       ) {
-    dio.interceptors.add(
-      InterceptorsWrapper(
-        onRequest: (options, handler) async {
-          final user = FirebaseAuth.instance.currentUser;
-
-          if (user != null) {
-            final token = await user.getIdToken();
-            options.headers['Authorization'] = 'Bearer $token';
-          }
-
-          return handler.next(options);
-        },
-      ),
-    );
     dio.interceptors.add(
       InterceptorsWrapper(
         onRequest: (options, handler) async {
@@ -49,6 +36,10 @@ class ApiClient {
 
         onError: (DioException e, handler) {
           final error = _mapDioError(e);
+          if (error.statusCode == 401) {
+            FirebaseAuth.instance.signOut();
+            // Optionally navigate to login or let the Auth provider handle it
+          }
           return handler.reject(
             DioException(
               requestOptions: e.requestOptions,
@@ -91,7 +82,7 @@ AppError _mapDioError(DioException e) {
     case 401:
       return AppError(message: "Session expired. Please log in again.", statusCode: 401);
     case 402:
-      return AppError(message: "Payment required or feature locked.", statusCode: 402);
+      return AppError(message: "Feature locked.", statusCode: 402);
     case 403:
       return AppError(message: "You don’t have permission.");
     case 404:
@@ -106,9 +97,26 @@ Future<T> safeRequest<T>(Future<T> Function() fn) async {
   try {
     return await fn();
   } on DioException catch (e) {
-    throw e.error is AppError
-        ? e
-        : AppError(message: "Unexpected error", raw: e);
+    if (e.error is AppError) {
+      throw e.error as AppError;
+    }
+
+    throw _mapDioError(e);
+  } on TypeError catch (e) {
+    throw AppError(
+      message: "Invalid server response.",
+      raw: e,
+    );
+  } on FormatException catch (e) {
+    throw AppError(
+      message: "Failed to parse server response.",
+      raw: e,
+    );
+  } catch (e) {
+    throw AppError(
+      message: "Unexpected application error.",
+      raw: e,
+    );
   }
 }
 

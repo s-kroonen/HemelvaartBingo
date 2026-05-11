@@ -25,7 +25,6 @@ class _LastCalledBarState extends ConsumerState<LastCalledBar> {
   @override
   Widget build(BuildContext context) {
     final latestEventAsync = ref.watch(latestEventProvider(widget.matchId));
-    final theme = Theme.of(context);
 
     // Listen for changes to trigger the timer
     ref.listen(latestEventProvider(widget.matchId), (prev, next) {

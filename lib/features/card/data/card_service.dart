@@ -7,23 +7,33 @@ class CardService {
 
   CardService(this._dio);
 
-  // Fetch all matches for the current user
-  Future<List<CardModel>> fetchMyCards() async {
-    final response = await _dio.get('/cards');
-    return (response.data as List).map((m) => CardModel.fromJson(m)).toList();
-  }
-
   // Fetch the specific context (Match + Role)
   Future<CardModel> fetchMyCard(String matchId) async {
     return safeRequest(() async {
       final response = await _dio.get('/cards/my-card');
+      if (response.data is! Map<String, dynamic>) {
+        throw AppError(
+          message: "Server returned invalid card data.",
+          raw: response.data,
+        );
+      }
       return CardModel.fromJson(response.data);
     });
   }
 
   Future<CardModel> fetchMyCurrentCard() async {
-    final response = await _dio.get('/cards/my-card');
-    return CardModel.fromJson(response.data);
+    return safeRequest(() async {
+      final response = await _dio.get('/cards/my-card');
+
+      if (response.data is! Map<String, dynamic>) {
+        throw AppError(
+          message: "Server returned invalid card data.",
+          raw: response.data,
+        );
+      }
+
+      return CardModel.fromJson(response.data);
+    });
   }
 
   Future<CardModel> updateCellState(String cellId, bool isChecked) async {
@@ -31,11 +41,6 @@ class CardService {
       '/cards/cell',
       data: {"cellId": cellId, "isChecked": isChecked},
     );
-    return CardModel.fromJson(res.data);
-  }
-
-  Future<CardModel> getMyCard() async {
-    final res = await _dio.put('/cards/my-card');
     return CardModel.fromJson(res.data);
   }
 }
