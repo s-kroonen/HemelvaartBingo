@@ -173,11 +173,14 @@ class _CardPageState extends ConsumerState<CardPage> {
     final userAsync = ref.watch(userProvider);
     final contextAsync = ref.watch(currentMatchProvider);
     contextAsync.whenData((matchContext) {
-      final socket = ref.watch(socketProvider(matchContext.match.id));
-      socket.on('eventUpdated', (_) {
-        // Live refresh when a number is called or recalled
-        ref.invalidate(eventProvider);
-        ref.invalidate(latestEventProvider(matchContext.match.id));
+      final socketAsync = ref.watch(socketProvider(matchContext.match.id));
+
+      socketAsync.whenData((socket) {
+        socket.off('eventUpdated');
+        socket.on('eventUpdated', (_) {
+          ref.invalidate(eventProvider);
+          ref.invalidate(latestEventProvider(matchContext.match.id));
+        });
       });
     });
     return Scaffold(
@@ -186,11 +189,15 @@ class _CardPageState extends ConsumerState<CardPage> {
         builder: (context, constraints) {
           return RefreshIndicator(
             onRefresh: () async {
+              ref.invalidate(userProvider);
+              ref.invalidate(currentMatchProvider);
               await ref.read(userProvider.future);
               final match = await ref.read(currentMatchProvider.future);
               if (match.roleInMatch == "master") {
+                ref.invalidate(eventProvider);
                 await ref.read(eventProvider.future);
               } else {
+                ref.invalidate(currentCardProvider);
                 await ref.read(currentCardProvider.future);
               }
             },
@@ -464,25 +471,38 @@ void _confirmBingo(
 ) {
   showDialog(
     context: context,
-    builder: (context) => AlertDialog(
+    builder: (dialogContext) => AlertDialog(
       title: const Text("Call Bingo?"),
       content: const Text(
         "Are you sure? A false Bingo might have consequences!",
       ),
       actions: [
         TextButton(
-          onPressed: () => Navigator.pop(context),
+          onPressed: () => Navigator.pop(dialogContext),
           child: const Text("Wait!"),
         ),
         ElevatedButton(
           onPressed: () async {
-            Navigator.pop(context); // Close confirm
-            // Perform Call
-            final result = await ref
-                .read(matchServiceProvider)
-                .callBingo(cardId, matchId);
+            // 1. Close the confirmation dialog using its own context
+            Navigator.pop(dialogContext);
 
-            _showResultDialog(context, result);
+            try {
+              // 2. Perform the network call
+              final result = await ref
+                  .read(matchServiceProvider)
+                  .callBingo(cardId, matchId);
+
+              // 3. IMPORTANT: Check if the CardPage is still visible/mounted
+              // before trying to show the result dialog.
+              if (!context.mounted) return;
+
+              _showResultDialog(context, result);
+            } catch (e) {
+              // Handle potential errors from the bingo call itself
+              if (context.mounted && e is AppError) {
+                showAppError(context, e);
+              }
+            }
           },
           child: const Text("YES, BINGO!"),
         ),
