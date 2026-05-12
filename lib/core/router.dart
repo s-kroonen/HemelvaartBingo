@@ -1,6 +1,7 @@
 // lib/core/router.dart
 
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../features/auth/presentation/pages/login_page.dart';
@@ -15,6 +16,8 @@ import 'package:flutter/foundation.dart';
 // lib/core/router.dart
 
 // lib/core/router.dart
+
+final GlobalKey<MainScreenState> mainScreenKey = GlobalKey<MainScreenState>();
 
 final routerProvider = Provider<GoRouter>((ref) {
   final notifier = ValueNotifier(0);
@@ -43,7 +46,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       return null;
     },
     routes: [
-      GoRoute(path: '/', builder: (context, state) => const MainScreen()),
+      GoRoute(path: '/', builder: (context, state) => MainScreen(key: mainScreenKey)),
       GoRoute(path: '/login', builder: (context, state) => const LoginPage()),
       GoRoute(
         path: '/settings/invites/:matchId',

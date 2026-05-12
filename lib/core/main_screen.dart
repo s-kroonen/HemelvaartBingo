@@ -7,14 +7,15 @@ import '../features/user/presentation/profile_screen.dart';
 import '../shared/widgets/main_navigation.dart';
 import '../shared/widgets/themed_background.dart';
 
+
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
 
   @override
-  State<MainScreen> createState() => _MainScreenState();
+  State<MainScreen> createState() => MainScreenState();
 }
 
-class _MainScreenState extends State<MainScreen> {
+class MainScreenState extends State<MainScreen> {
   int currentIndex = 1;
 
   final pages = const [
@@ -27,15 +28,15 @@ class _MainScreenState extends State<MainScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: ThemedBackground(
-        child: pages[currentIndex],
-      ),
+      body: ThemedBackground(child: pages[currentIndex]),
       bottomNavigationBar: MainNavigation(
         currentIndex: currentIndex,
-        onTap: (index) {
-          setState(() => currentIndex = index);
-        },
+        onTap: goToTab,
       ),
     );
+  }
+
+  void goToTab(int index) {
+    setState(() => currentIndex = index);
   }
 }

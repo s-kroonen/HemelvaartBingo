@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:hemelvaartbingo/core/main_screen.dart';
 import 'package:hemelvaartbingo/features/user/data/user_model.dart';
 import '../../../../core/network/api_client.dart';
 import '../../../../core/network/socket_provider.dart';
+import '../../../../core/router.dart';
 import '../../../../shared/widgets/async_value_view.dart';
 import '../../../event/data/event_model.dart';
 import '../../../event/providers/event_provider.dart';
@@ -173,16 +175,24 @@ class _CardPageState extends ConsumerState<CardPage> {
     final userAsync = ref.watch(userProvider);
     final contextAsync = ref.watch(currentMatchProvider);
     contextAsync.whenData((matchContext) {
-      final socketAsync = ref.watch(socketProvider(matchContext.match.id));
+      if (matchContext == null) return;
+
+      final match = matchContext.match;
+      if (match == null) return;
+
+      final socketAsync = ref.watch(socketProvider(match.id));
 
       socketAsync.whenData((socket) {
         socket.off('eventUpdated');
+
         socket.on('eventUpdated', (_) {
           ref.invalidate(eventProvider);
-          ref.invalidate(latestEventProvider(matchContext.match.id));
+          ref.invalidate(latestEventProvider(match.id));
         });
       });
     });
+
+    final router = ref.read(routerProvider);
     return Scaffold(
       appBar: AppBar(title: const Text("Game Session"), centerTitle: true),
       body: LayoutBuilder(
@@ -193,6 +203,7 @@ class _CardPageState extends ConsumerState<CardPage> {
               ref.invalidate(currentMatchProvider);
               await ref.read(userProvider.future);
               final match = await ref.read(currentMatchProvider.future);
+              if(match == null) throw AppError(message: "Match not found");
               if (match.roleInMatch == "master") {
                 ref.invalidate(eventProvider);
                 await ref.read(eventProvider.future);
@@ -219,7 +230,42 @@ class _CardPageState extends ConsumerState<CardPage> {
                   data: (user) => AsyncValueView(
                     value: contextAsync,
                     onRetry: () => ref.invalidate(currentMatchProvider),
-                    data: (matchContext) {
+                    data: (matchContextNullable) {
+                      if (user.currentMatchID == null || matchContextNullable == null) {
+                        return Center(
+                          child: Padding(
+                            padding: const EdgeInsets.all(24),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(
+                                  Icons.sports_esports_outlined,
+                                  size: 64,
+                                ),
+                                const SizedBox(height: 16),
+                                Text(
+                                  "No match selected",
+                                  style: Theme.of(context).textTheme.titleLarge,
+                                ),
+                                const SizedBox(height: 8),
+                                const Text(
+                                  "Please select a bingo match in settings.",
+                                  textAlign: TextAlign.center,
+                                ),
+                                const SizedBox(height: 24),
+                                ElevatedButton(
+                                  onPressed: () {
+                                    mainScreenKey.currentState?.goToTab(3);
+                                  },
+                                  child: const Text("Open Settings"),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      }
+
+                      final matchContext = matchContextNullable;
                       if (matchContext.roleInMatch == "master") {
                         _startTutorial(matchContext, user);
                         return _buildMasterView(context, matchContext);
@@ -249,7 +295,10 @@ class _CardPageState extends ConsumerState<CardPage> {
   }
 
   // --- PLAYER VIEW ---
-  Widget _buildPlayerView(MatchContext data, CardModel card) {
+  Widget _buildPlayerView(MatchContext? data, CardModel card) {
+    if (data == null) throw AppError(message: "MatchContext not found");
+    final match = data.match;
+    if (match == null) throw AppError(message: "Match not found");
     return Column(
       children: [
         // 1. The Grid takes all available top space
@@ -292,7 +341,7 @@ class _CardPageState extends ConsumerState<CardPage> {
                   shadowColor: Colors.red.withOpacity(0.5),
                 ),
                 onPressed: () =>
-                    _confirmBingo(context, ref, card.id, data.match.id),
+                    _confirmBingo(context, ref, card.id, match.id),
                 icon: const Icon(Icons.star, color: Colors.yellow, size: 28),
                 label: const Text("BINGO!"),
               ),
@@ -304,16 +353,18 @@ class _CardPageState extends ConsumerState<CardPage> {
           key: _lastCalledKey,
           description:
               "Latest number appears here briefly. Want history? You can view it by watching an ad.",
-          child: LastCalledBar(visibilitySeconds: 10, matchId: data.match.id),
+          child: LastCalledBar(visibilitySeconds: 10, matchId: match.id),
         ),
       ],
     );
   }
 
   // --- MASTER VIEW ---
-  Widget _buildMasterView(BuildContext context, MatchContext data) {
+  Widget _buildMasterView(BuildContext context, MatchContext? data) {
     final eventsAsync = ref.watch(eventProvider);
-
+    if (data == null) throw AppError(message: "MatchContext not found");
+    final match = data.match;
+    if (match == null) throw AppError(message: "Match not found");
     return Column(
       children: [
         Showcase(
@@ -353,7 +404,7 @@ class _CardPageState extends ConsumerState<CardPage> {
                     "Create events here. Enable auto-call to instantly call a number when created.",
                 child: FloatingActionButton.small(
                   onPressed: () =>
-                      _openEventDialog(context, ref, data.match.id),
+                      _openEventDialog(context, ref, match.id),
                   child: const Icon(Icons.add),
                 ),
               ),
@@ -435,7 +486,7 @@ class _CardPageState extends ConsumerState<CardPage> {
                               onPressed: () => _openEventDialog(
                                 context,
                                 ref,
-                                data.match.id,
+                                match.id,
                                 event,
                               ),
                             ),

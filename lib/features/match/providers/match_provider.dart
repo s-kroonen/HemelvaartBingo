@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/network/api_client.dart';
 import '../../../core/network/api_client_provider.dart';
 import '../../invites/data/invite_model.dart';
 import '../../user/providers/user_provider.dart';
@@ -11,10 +12,22 @@ final matchServiceProvider = Provider<MatchService>((ref) {
   return MatchService(dio);
 });
 
-class CurrentMatchNotifier extends AsyncNotifier<MatchContext> {
+class CurrentMatchNotifier extends AsyncNotifier<MatchContext?> {
   @override
-  Future<MatchContext> build() async {
-    return ref.read(matchServiceProvider).fetchCurrentMatchContext();
+  Future<MatchContext?> build() async {
+    // return ref.read(matchServiceProvider).fetchCurrentMatchContext();
+    try {
+      return ref.read(matchServiceProvider).fetchCurrentMatchContext();
+    } on AppError catch (e) {
+      if (e.statusCode == 404) {
+        return MatchContext(
+          match: null,
+          roleInMatch: 'user',
+        );
+      }
+
+      rethrow;
+    }
   }
 
   // Side effect: Change the match and refresh the UI
@@ -30,7 +43,7 @@ class CurrentMatchNotifier extends AsyncNotifier<MatchContext> {
 }
 
 final currentMatchProvider =
-    AsyncNotifierProvider<CurrentMatchNotifier, MatchContext>(
+    AsyncNotifierProvider<CurrentMatchNotifier, MatchContext?>(
       CurrentMatchNotifier.new,
     );
 
@@ -41,7 +54,10 @@ final allMatchesProvider = FutureProvider<List<MatchModel>>((ref) async {
 
 final currentMatchIdProvider = Provider<String?>((ref) {
   final matchAsync = ref.watch(currentMatchProvider);
-  return matchAsync.value?.match.id;
+  if (matchAsync.value?.match == null) return null;
+  final match = matchAsync.value?.match;
+  if (match == null) return null;
+  return match.id;
 });
 final matchInvitesProvider = FutureProvider.family<List<InviteModel>, String>((ref, matchId) async {
   return ref.watch(matchServiceProvider).fetchInvites(matchId);
