@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:hemelvaartbingo/services/notification.manager.dart';
 
 import '../../shared/providers/theme_provider.dart';
+import '../../shared/widgets/async_value_view.dart';
 import '../match/data/match_models.dart';
 import '../match/providers/match_provider.dart';
 import '../user/providers/user_provider.dart';
@@ -30,7 +31,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     return Scaffold(
       backgroundColor: Colors.transparent,
       appBar: AppBar(title: const Text("Settings"), centerTitle: true),
-      body: userAsync.when(
+      body: AsyncValueView(
+        value: userAsync,
+        onRetry: () => ref.invalidate(userProvider),
         data: (user) => ListView(
           padding: const EdgeInsets.all(16),
           children: [
@@ -187,7 +190,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               onChanged: (v) => setState(() => query = v.toLowerCase()),
             ),
             const SizedBox(height: 12),
-            matchesAsync.when(
+            AsyncValueView(
+              value: matchesAsync,
+              onRetry: () => ref.invalidate(allMatchesProvider),
               data: (matches) {
                 final filtered = matches
                     .where((m) => m.name.toLowerCase().contains(query))
@@ -267,13 +272,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   ],
                 );
               },
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (e, _) => Center(child: Text("Error loading matches: $e")),
+              loading: const Center(child: CircularProgressIndicator())
             ),
           ],
         ),
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text("Profile Error: $e")),
+        loading: Center(child: CircularProgressIndicator())
       ),
     );
   }

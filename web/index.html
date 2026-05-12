@@ -33,39 +33,60 @@
     <link rel="manifest" href="manifest.json">
 </head>
 <body>
-<!-- This starts Flutter -->
 <script src="flutter_bootstrap.js" async></script>
-
-<!-- This handles our PWA Update Logic and SW Bridge -->
+<script>
+    window.addEventListener('load', function() {
+      _flutter.loader.loadEntrypoint({
+        serviceWorker: {
+          serviceWorkerUrl: 'firebase-messaging-sw.js',
+        }
+      });
+    });
+</script>
 <script>
     let newWorker;
 
-    // Listen for the Service Worker registration
-    navigator.serviceWorker.getRegistration().then(reg => {
-      if (!reg) return;
+    async function setupUpdateTracking() {
+      // Wait for the service worker to be ready
+      const registration = await navigator.serviceWorker.ready;
 
-      reg.addEventListener('updatefound', () => {
-        newWorker = reg.installing;
-        newWorker.addEventListener('statechange', () => {
-          if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-            // Tells Flutter a new version is ready in the background
-            window.dispatchEvent(new CustomEvent('pwa_update_available'));
+      // Check for updates every time the page is focused or loaded
+      registration.update();
+
+      const notifyFlutter = (worker) => {
+        newWorker = worker;
+        window.dispatchEvent(new CustomEvent('pwa_update_available'));
+      };
+
+      // 1. If there's already a worker waiting (user refreshed but didn't click update)
+      if (registration.waiting) {
+        notifyFlutter(registration.waiting);
+      }
+
+      // 2. Listen for new updates being found/installed
+      registration.addEventListener('updatefound', () => {
+        const installingWorker = registration.installing;
+        installingWorker.addEventListener('statechange', () => {
+          if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
+            notifyFlutter(installingWorker);
           }
         });
       });
-    });
+    }
 
-    // Listen for Flutter's "UPDATE NOW" button click
+    // 3. Listen for the "UPDATE NOW" command from Flutter
     window.addEventListener('pwa_activate_update', () => {
       if (newWorker) {
         newWorker.postMessage({ type: 'SKIP_WAITING' });
       }
     });
 
-    // Reload the page once the new service worker has taken over
+    // 4. Reload when the new worker takes control
     navigator.serviceWorker.addEventListener('controllerchange', () => {
       window.location.reload();
     });
+
+    setupUpdateTracking();
 </script>
 </body>
 </html>

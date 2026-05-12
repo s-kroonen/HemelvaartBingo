@@ -34,5 +34,11 @@ class UserService {
     return await updateProfile(updateData);
   }
 
-  Future<void> updateUserTokens(String token) async {}
+  Future<void> addUserTokens(String token) async {
+    final updateData = {
+      "fcmTokens" : token,
+    };
+
+    return await updateProfile(updateData);
+  }
 }

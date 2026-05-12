@@ -19,11 +19,26 @@ class NotificationService {
 
     NotificationSettings settings = await _fcm.getNotificationSettings();
 
-    if (settings.authorizationStatus == AuthorizationStatus.notDetermined && hasDismissed != true) {
+    if (settings.authorizationStatus == AuthorizationStatus.notDetermined &&
+        hasDismissed != true) {
       _showPermissionDialog(context);
     } else if (settings.authorizationStatus == AuthorizationStatus.authorized) {
       registerToken();
     }
+    // Inside your NotificationService initialization
+    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+      debugPrint('Got a message whilst in the foreground!');
+
+      if (message.notification != null) {
+        // Show a SnackBar or a custom Dialog since the OS won't show a popup
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("${message.notification!.title}: ${message.notification!.body}"),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      }
+    });
   }
 
   void _showPermissionDialog(BuildContext context) {
@@ -31,7 +46,9 @@ class NotificationService {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text("Stay Updated!"),
-        content: const Text("Get notified immediately when a new Bingo number is called."),
+        content: const Text(
+          "Get notified immediately when a new Bingo number is called.",
+        ),
         actions: [
           TextButton(
             child: const Text("Later"),
@@ -55,7 +72,9 @@ class NotificationService {
 
   Future<void> requestAndRegister() async {
     NotificationSettings settings = await _fcm.requestPermission(
-      alert: true, badge: true, sound: true,
+      alert: true,
+      badge: true,
+      sound: true,
     );
 
     if (settings.authorizationStatus == AuthorizationStatus.authorized) {
@@ -65,11 +84,12 @@ class NotificationService {
 
   Future<void> registerToken() async {
     String? token = await _fcm.getToken(
-        vapidKey: "BIRdR4wrFKibwpyfCU1QDdLZCJKpiKJwODQrSBYc8uuemBeyaREmXl8FnLVvV9LkD4q8pCec8HNCw8xfkm7vVqk"
+      vapidKey:
+          "BIRdR4wrFKibwpyfCU1QDdLZCJKpiKJwODQrSBYc8uuemBeyaREmXl8FnLVvV9LkD4q8pCec8HNCw8xfkm7vVqk",
     );
 
     if (token != null) {
-      await ref.read(userServiceProvider).updateUserTokens(token);
+      await ref.read(userServiceProvider).addUserTokens(token);
     }
   }
 }

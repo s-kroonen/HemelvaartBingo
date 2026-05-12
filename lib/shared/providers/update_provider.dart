@@ -1,7 +1,7 @@
-// lib/shared/providers/update_provider.dart
-import 'dart:html' as html; // ignore: avoid_web_libraries_in_flutter
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'dart:js_interop';
+
 import 'package:flutter_riverpod/legacy.dart';
+import 'package:web/web.dart' as web;
 
 final updateProvider = StateNotifierProvider<UpdateNotifier, bool>((ref) {
   return UpdateNotifier();
@@ -13,14 +13,14 @@ class UpdateNotifier extends StateNotifier<bool> {
   }
 
   void _init() {
-    // Listen for the custom JS event we'll add to index.html
-    html.window.addEventListener('pwa_update_available', (event) {
+    // Listen for the custom event from index.html
+    web.window.addEventListener('pwa_update_available', (web.Event event) {
       state = true;
-    });
+    }.toJS); // Correct way to handle JS callbacks in modern Flutter
   }
 
   void activateUpdate() {
-    // Tell the Service Worker to skipWaiting
-    html.window.dispatchEvent(new html.CustomEvent('pwa_activate_update'));
+    // Signal index.html to trigger skipWaiting
+    web.window.dispatchEvent(web.CustomEvent('pwa_activate_update'));
   }
 }

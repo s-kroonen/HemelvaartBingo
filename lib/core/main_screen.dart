@@ -10,18 +10,17 @@ import '../shared/providers/update_provider.dart';
 import '../shared/widgets/main_navigation.dart';
 import '../shared/widgets/themed_background.dart';
 
-class MainScreen extends ConsumerStatefulWidget {
+// class MainScreen extends ConsumerStatefulWidget {
 
-class MainScreen extends StatefulWidget {
+class MainScreen extends ConsumerStatefulWidget {
   const MainScreen({super.key});
 
   @override
-  ConsumerState<MainScreen> createState() => _MainScreenState();
-  State<MainScreen> createState() => MainScreenState();
+  ConsumerState<MainScreen> createState() => MainScreenState();
 }
 
-class _MainScreenState extends ConsumerState<MainScreen> {
-class MainScreenState extends State<MainScreen> {
+class MainScreenState extends ConsumerState<MainScreen> {
+// class MainScreenState extends State<MainScreen> {
   int currentIndex = 1;
 
   @override
@@ -30,6 +29,7 @@ class MainScreenState extends State<MainScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       // Access the provider directly
       ref.read(notificationServiceProvider).checkPermissionOnStartup(context);
+          // State<MainScreen> createState() => MainScreenState(););
     });
   }
 
