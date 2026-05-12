@@ -4,6 +4,7 @@ class EventModel {
   final String? description;
   final bool called;
   final List<int> numbers;
+  final List<int> manualNumbers;
 
   EventModel({
     required this.id,
@@ -11,6 +12,7 @@ class EventModel {
     this.description,
     required this.called,
     required this.numbers,
+    required this.manualNumbers
   });
 
   factory EventModel.fromJson(Map<String, dynamic> json) {
@@ -20,6 +22,7 @@ class EventModel {
       description: json['description'],
       called: json['called'] ?? false,
       numbers: List<int>.from(json['numbers'] ?? []),
+      manualNumbers: List<int>.from(json['manualNumbers'] ?? [])
     );
   }
   static List<EventModel> mockList() => [
@@ -29,6 +32,7 @@ class EventModel {
       description: "",
       called: false,
       numbers: [],
+      manualNumbers: []
     ),
   ];
 }

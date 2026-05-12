@@ -203,7 +203,7 @@ class _CardPageState extends ConsumerState<CardPage> {
               ref.invalidate(currentMatchProvider);
               await ref.read(userProvider.future);
               final match = await ref.read(currentMatchProvider.future);
-              if(match == null) throw AppError(message: "Match not found");
+              if (match == null) throw AppError(message: "Match not found");
               if (match.roleInMatch == "master") {
                 ref.invalidate(eventProvider);
                 await ref.read(eventProvider.future);
@@ -231,7 +231,8 @@ class _CardPageState extends ConsumerState<CardPage> {
                     value: contextAsync,
                     onRetry: () => ref.invalidate(currentMatchProvider),
                     data: (matchContextNullable) {
-                      if (user.currentMatchID == null || matchContextNullable == null) {
+                      if (user.currentMatchID == null ||
+                          matchContextNullable == null) {
                         return Center(
                           child: Padding(
                             padding: const EdgeInsets.all(24),
@@ -340,8 +341,7 @@ class _CardPageState extends ConsumerState<CardPage> {
                   // Makes it pill-shaped
                   shadowColor: Colors.red.withOpacity(0.5),
                 ),
-                onPressed: () =>
-                    _confirmBingo(context, ref, card.id, match.id),
+                onPressed: () => _confirmBingo(context, ref, card.id, match.id),
                 icon: const Icon(Icons.star, color: Colors.yellow, size: 28),
                 label: const Text("BINGO!"),
               ),
@@ -403,8 +403,7 @@ class _CardPageState extends ConsumerState<CardPage> {
                 description:
                     "Create events here. Enable auto-call to instantly call a number when created.",
                 child: FloatingActionButton.small(
-                  onPressed: () =>
-                      _openEventDialog(context, ref, match.id),
+                  onPressed: () => _openEventDialog(context, ref, match),
                   child: const Icon(Icons.add),
                 ),
               ),
@@ -486,7 +485,7 @@ class _CardPageState extends ConsumerState<CardPage> {
                               onPressed: () => _openEventDialog(
                                 context,
                                 ref,
-                                match.id,
+                                match,
                                 event,
                               ),
                             ),
@@ -657,68 +656,222 @@ void _showResultDialog(BuildContext context, BingoResultDto result) {
 void _openEventDialog(
   BuildContext context,
   WidgetRef ref,
-  String matchId, [
+  MatchModel match, [
   EventModel? event,
 ]) {
   final nameController = TextEditingController(text: event?.name ?? '');
   final descController = TextEditingController(text: event?.description ?? '');
+  final manualNumbersController = TextEditingController(
+    text: (event?.manualNumbers ?? []).isNotEmpty
+        ? (event!.manualNumbers!.join(', '))
+        : '',
+  );
+
+  // Local dialog state
   bool autoCall = false;
+  final maxNumber = match.mode == BingoMode.BINGO_90 ? 90 : 75;
+  String? nameError;
+  String? numbersError;
+  final isCalled = event?.called ?? false;
+  final isCreating = event == null;
 
   showDialog(
     context: context,
-    builder: (_) => AlertDialog(
-      title: Text(event == null ? "Create Event" : "Edit Event"),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          TextField(
-            controller: nameController,
-            decoration: const InputDecoration(labelText: "Name"),
-          ),
-          TextField(
-            controller: descController,
-            decoration: const InputDecoration(labelText: "Description"),
-          ),
-          if (event == null)
-            CheckboxListTile(
-              title: const Text("Auto Call"),
-              value: autoCall,
-              onChanged: (v) => autoCall = v ?? false,
-            ),
-        ],
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text("Cancel"),
-        ),
-        ElevatedButton(
-          onPressed: () {
-            final notifier = ref.read(eventProvider.notifier);
-            try {
-              if (event == null) {
-                notifier.createEvent({
-                  "name": nameController.text,
-                  "description": descController.text,
-                  "autoCall": autoCall,
-                });
-              } else {
-                notifier.updateEvent(event.id, {
-                  "name": nameController.text,
-                  "description": descController.text,
-                });
-              }
-            } catch (e) {
-              if (context.mounted && e is AppError) {
-                showAppError(context, e);
-              }
-            }
+    builder: (_) => StatefulBuilder(
+      builder: (context, setDialogState) {
+        // Validate numbers field
+        List<int> _parseNumbers() {
+          final text = manualNumbersController.text.trim();
+          if (text.isEmpty) return [];
+          return text
+              .split(',')
+              .map((s) => int.tryParse(s.trim()))
+              .whereType<int>()
+              .toList();
+        }
 
-            Navigator.pop(context);
-          },
-          child: const Text("Save"),
-        ),
-      ],
+        bool _validateNumbers() {
+          final text = manualNumbersController.text.trim();
+          if (text.isEmpty) return true;
+          final parts = text.split(',');
+          for (final part in parts) {
+            final n = int.tryParse(part.trim());
+            if (n == null) return false;
+            if (n < 1 || n > maxNumber) return false; // ← uses match mode
+          }
+          return true;
+        }
+
+        return AlertDialog(
+          title: Text(isCreating ? "Create Event" : "Edit Event"),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Name — required
+                TextField(
+                  controller: nameController,
+                  decoration: InputDecoration(
+                    labelText: "Name *",
+                    errorText: nameError,
+                  ),
+                  onChanged: (_) {
+                    if (nameError != null) {
+                      setDialogState(() => nameError = null);
+                    }
+                  },
+                ),
+                const SizedBox(height: 8),
+
+                // Description — optional
+                TextField(
+                  controller: descController,
+                  decoration: const InputDecoration(labelText: "Description"),
+                ),
+                const SizedBox(height: 12),
+
+                // Auto call — only on create
+                if (isCreating)
+                  CheckboxListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text("Auto Call"),
+                    subtitle: const Text(
+                      "Numbers will be assigned immediately on creation",
+                      style: TextStyle(fontSize: 11),
+                    ),
+                    value: autoCall,
+                    onChanged: (v) =>
+                        setDialogState(() => autoCall = v ?? false),
+                  ),
+
+                const SizedBox(height: 8),
+
+                // Manual numbers — always shown, grayed out if called
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Text(
+                          "Manual Numbers",
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
+                            color: isCalled ? Colors.black12 : null,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        // Badge showing called state
+                        if (isCalled)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.orange.shade100,
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: const Text(
+                              "Event already called",
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: Colors.deepOrange,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    TextField(
+                      controller: manualNumbersController,
+                      enabled: !isCalled,
+                      // grayed out if called
+                      decoration: InputDecoration(
+                        hintText: isCalled
+                            ? "Cannot edit after calling"
+                            : "e.g. 5, 12, 34  (1–$maxNumber, optional)",
+                        errorText: numbersError,
+                        filled: isCalled,
+                        fillColor: isCalled ? Colors.black12 : null,
+                        helperText: isCalled
+                            ? "Recall the event first to change numbers"
+                            : "Leave empty to use random numbers",
+                        helperStyle: TextStyle(
+                          color: isCalled ? Colors.orange : Colors.grey,
+                          fontSize: 11,
+                        ),
+                      ),
+                      keyboardType: TextInputType.text,
+                      onChanged: (_) {
+                        if (numbersError != null) {
+                          setDialogState(() => numbersError = null);
+                        }
+                      },
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("Cancel"),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                // Validate name
+                if (nameController.text.trim().isEmpty) {
+                  setDialogState(() => nameError = "Name is required");
+                  return;
+                }
+
+                // Validate numbers
+                if (!_validateNumbers()) {
+                  setDialogState(
+                    () => numbersError =
+                        "Enter valid numbers between 1–$maxNumber, separated by commas",
+                  );
+                  return;
+                }
+
+                final manualNumbers = _parseNumbers();
+                final notifier = ref.read(eventProvider.notifier);
+
+                try {
+                  if (isCreating) {
+                    notifier.createEvent({
+                      "name": nameController.text.trim(),
+                      "description": descController.text.trim(),
+                      "autoCall": autoCall,
+                      if (manualNumbers.isNotEmpty)
+                        "manualNumbers": manualNumbers,
+                    });
+                  } else {
+                    notifier.updateEvent(event!.id, {
+                      "name": nameController.text.trim(),
+                      "description": descController.text.trim(),
+                      // Send null explicitly to clear if field was emptied
+                      "manualNumbers": manualNumbers.isNotEmpty
+                          ? manualNumbers
+                          : null,
+                    });
+                  }
+                } catch (e) {
+                  if (context.mounted && e is AppError) {
+                    showAppError(context, e);
+                  }
+                }
+
+                Navigator.pop(context);
+              },
+              child: const Text("Save"),
+            ),
+          ],
+        );
+      },
     ),
   );
 }
