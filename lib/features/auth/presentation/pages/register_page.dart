@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../providers/authService_provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class RegisterPage extends ConsumerStatefulWidget {
   const RegisterPage({super.key});
@@ -30,23 +31,32 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
 
     setState(() => isLoading = true);
     try {
-      final result = await ref.read(authServiceProvider).registerUser(
-        email: emailController.text.trim(),
-        password: passwordController.text.trim(),
-        username: usernameController.text.trim(),
-        emailNotifications: emailNotifications,
-        newsletter: newsletter,
-        testerProgram: testerProgram,
-      );
+      final result = await ref
+          .read(authServiceProvider)
+          .registerUser(
+            email: emailController.text.trim(),
+            password: passwordController.text.trim(),
+            username: usernameController.text.trim(),
+            emailNotifications: emailNotifications,
+            newsletter: newsletter,
+            testerProgram: testerProgram,
+          );
       if (result == RegistrationResult.partialSuccess) {
         // Show a dialog or special snackbar
         showDialog(
-            context: context,
-            builder: (c) => AlertDialog(
-              title: const Text("Welcome!"),
-              content: const Text("Account created successfully, but we couldn't save your preferences. You can update them later in Settings."),
-              actions: [TextButton(onPressed: () => context.go('/'), child: const Text("OK"))],
-            )
+          context: context,
+          builder: (c) => AlertDialog(
+            title: const Text("Welcome!"),
+            content: const Text(
+              "Account created successfully, but we couldn't save your preferences. You can update them later in Settings.",
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => context.go('/'),
+                child: const Text("OK"),
+              ),
+            ],
+          ),
         );
       }
       // GoRouter redirect logic handles the rest!
@@ -63,7 +73,9 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
   Widget build(BuildContext context) {
     // Keep the 'from' query param so it survives the transition to/from Login
     final from = GoRouterState.of(context).uri.queryParameters['from'];
-    final loginUrl = from != null ? '/login?from=${Uri.encodeComponent(from)}' : '/login';
+    final loginUrl = from != null
+        ? '/login?from=${Uri.encodeComponent(from)}'
+        : '/login';
 
     return Scaffold(
       appBar: AppBar(title: const Text("Create Account")),
@@ -110,9 +122,14 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
 
             CheckboxListTile(
               title: InkWell(
-                onTap: () => /* Open URL */ null,
-                child: const Text("I accept the Privacy Policy",
-                    style: TextStyle(decoration: TextDecoration.underline, color: Colors.blue)),
+                onTap: () async => await launchUrl(Uri.parse("https://bingo.kroon-en.nl/privacy")),
+                child: const Text(
+                  "I accept the Privacy Policy",
+                  style: TextStyle(
+                    decoration: TextDecoration.underline,
+                    color: Colors.blue,
+                  ),
+                ),
               ),
               value: acceptedPolicy,
               onChanged: (v) => setState(() => acceptedPolicy = v ?? false),
@@ -121,7 +138,9 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
             const SizedBox(height: 30),
             ElevatedButton(
               onPressed: (isLoading || !acceptedPolicy) ? null : _submit,
-              child: isLoading ? const CircularProgressIndicator() : const Text("Register"),
+              child: isLoading
+                  ? const CircularProgressIndicator()
+                  : const Text("Register"),
             ),
             TextButton(
               onPressed: () => context.go(loginUrl),
