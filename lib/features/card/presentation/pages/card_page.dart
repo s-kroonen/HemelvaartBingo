@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:hemelvaartbingo/core/main_screen.dart';
 import 'package:hemelvaartbingo/features/user/data/user_model.dart';
 import '../../../../core/network/api_client.dart';
+import '../../../../core/network/socket_provider.dart';
+import '../../../../core/router.dart';
+import '../../../../shared/widgets/async_value_view.dart';
 import '../../../event/data/event_model.dart';
 import '../../../event/providers/event_provider.dart';
 import '../../../match/data/match_models.dart';
@@ -153,141 +157,214 @@ class _CardPageState extends ConsumerState<CardPage> {
 
   @override
   Widget build(BuildContext context) {
-    final contextAsync = ref.watch(currentMatchProvider);
+    ref.listen(userProvider, (prev, next) {
+      next.whenOrNull(
+        error: (e, _) {
+          if (e is AppError) showAppError(context, e);
+        },
+      );
+    });
+
+    ref.listen(currentMatchProvider, (prev, next) {
+      next.whenOrNull(
+        error: (e, _) {
+          if (e is AppError) showAppError(context, e);
+        },
+      );
+    });
     final userAsync = ref.watch(userProvider);
+    final contextAsync = ref.watch(currentMatchProvider);
+    contextAsync.whenData((matchContext) {
+      if (matchContext == null) return;
+
+      final match = matchContext.match;
+      if (match == null) return;
+
+      final socketAsync = ref.watch(socketProvider(match.id));
+
+      socketAsync.whenData((socket) {
+        socket.off('eventUpdated');
+
+        socket.on('eventUpdated', (_) {
+          ref.invalidate(eventProvider);
+          ref.invalidate(latestEventProvider(match.id));
+        });
+      });
+    });
+
+    final router = ref.read(routerProvider);
     return Scaffold(
-      backgroundColor: Colors.transparent,
       appBar: AppBar(title: const Text("Game Session"), centerTitle: true),
-      body: userAsync.when(
-        data: (user) => contextAsync.when(
-          data: (matchContext) {
-            // 1. Check Role
-            if (matchContext.roleInMatch == "master") {
-              _startTutorial(matchContext, user);
-              return _buildMasterView(context, matchContext);
-            } else {
-              // 2. If Player, watch the Card Provider
-              final cardAsync = ref.watch(currentCardProvider);
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          return RefreshIndicator(
+            onRefresh: () async {
+              ref.invalidate(userProvider);
+              ref.invalidate(currentMatchProvider);
+              await ref.read(userProvider.future);
+              final match = await ref.read(currentMatchProvider.future);
+              if(match == null) throw AppError(message: "Match not found");
+              if (match.roleInMatch == "master") {
+                ref.invalidate(eventProvider);
+                await ref.read(eventProvider.future);
+              } else {
+                ref.invalidate(currentCardProvider);
+                await ref.read(currentCardProvider.future);
+              }
+            },
+            child: Stack(
+              children: [
+                // Layer 1: Invisible scrollable area to enable Pull-to-Refresh
+                SingleChildScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  child: SizedBox(
+                    height: constraints.maxHeight,
+                    width: constraints.maxWidth,
+                  ),
+                ),
 
-              return cardAsync.when(
-                data: (card) {
-                  _startTutorial(matchContext, user);
-                  final card = _isTutorial
-                      ? CardModel.mock()
-                      : cardAsync.value!;
-                  return _buildPlayerView(matchContext, card);
-                },
-                loading: () => const Center(child: CircularProgressIndicator()),
-                error: (e, _) {
-                  if (e is AppError) {
-                    WidgetsBinding.instance.addPostFrameCallback((_) {
-                      showAppError(context, e);
-                    });
-                    return const SizedBox();
-                  }
+                // Layer 2: Actual Content
+                AsyncValueView(
+                  value: userAsync,
+                  onRetry: () => ref.invalidate(userProvider),
+                  data: (user) => AsyncValueView(
+                    value: contextAsync,
+                    onRetry: () => ref.invalidate(currentMatchProvider),
+                    data: (matchContextNullable) {
+                      if (user.currentMatchID == null || matchContextNullable == null) {
+                        return Center(
+                          child: Padding(
+                            padding: const EdgeInsets.all(24),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(
+                                  Icons.sports_esports_outlined,
+                                  size: 64,
+                                ),
+                                const SizedBox(height: 16),
+                                Text(
+                                  "No match selected",
+                                  style: Theme.of(context).textTheme.titleLarge,
+                                ),
+                                const SizedBox(height: 8),
+                                const Text(
+                                  "Please select a bingo match in settings.",
+                                  textAlign: TextAlign.center,
+                                ),
+                                const SizedBox(height: 24),
+                                ElevatedButton(
+                                  onPressed: () {
+                                    mainScreenKey.currentState?.goToTab(3);
+                                  },
+                                  child: const Text("Open Settings"),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      }
 
-                  return Text("Unexpected error");
-                },
-              );
-            }
-          },
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (e, _) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.casino, size: 64),
-                  const SizedBox(height: 16),
-                  const Text("You're not in a match yet"),
-                  const SizedBox(height: 8),
-                  // ElevatedButton(
-                  //   onPressed: () {
-                  //     // navigate to join/create
-                  //   },
-                  //   child: const Text("Join or Create Match"),
-                  // ),
-                ],
-              ),
-            );
-          },
-        ),
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text("User Error: $e")),
+                      final matchContext = matchContextNullable;
+                      if (matchContext.roleInMatch == "master") {
+                        _startTutorial(matchContext, user);
+                        return _buildMasterView(context, matchContext);
+                      } else {
+                        final cardAsync = ref.watch(currentCardProvider);
+                        return AsyncValueView(
+                          value: cardAsync,
+                          onRetry: () => ref.invalidate(currentCardProvider),
+                          data: (card) {
+                            _startTutorial(matchContext, user);
+                            return _buildPlayerView(
+                              matchContext,
+                              _isTutorial ? CardModel.mock() : card,
+                            );
+                          },
+                        );
+                      }
+                    },
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
       ),
     );
   }
 
   // --- PLAYER VIEW ---
-  Widget _buildPlayerView(MatchContext data, CardModel card) {
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      body: Column(
-        children: [
-          // 1. The Grid takes all available top space
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(8, 8, 8, 0),
-              child: Showcase(
-                key: _gridKey,
-                description:
-                    "This is your bingo card. Tap cells to mark numbers yourself—nothing is filled automatically.",
-                child: BingoGrid(cells: card.cells),
-              ),
+  Widget _buildPlayerView(MatchContext? data, CardModel card) {
+    if (data == null) throw AppError(message: "MatchContext not found");
+    final match = data.match;
+    if (match == null) throw AppError(message: "Match not found");
+    return Column(
+      children: [
+        // 1. The Grid takes all available top space
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(8, 8, 8, 0),
+            child: Showcase(
+              key: _gridKey,
+              description:
+                  "This is your bingo card. Tap cells to mark numbers yourself.",
+              child: BingoGrid(cells: card.cells),
             ),
           ),
+        ),
 
-          // 2. The "BINGO!" Button centered horizontally
-          // We add some padding to give it breathing room from the grid and the bar
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 20),
-            child: Center(
-              child: Showcase(
-                key: _bingoButtonKey,
-                description:
-                    "Think you have bingo? Press this! You'll need to confirm—false calls may have consequences.",
-                child: ElevatedButton.icon(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.redAccent,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 48,
-                      vertical: 16,
-                    ),
-                    textStyle: const TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 1.2,
-                    ),
-                    elevation: 6,
-                    shape: const StadiumBorder(),
-                    // Makes it pill-shaped
-                    shadowColor: Colors.red.withOpacity(0.5),
+        // 2. The "BINGO!" Button centered horizontally
+        // We add some padding to give it breathing room from the grid and the bar
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 20),
+          child: Center(
+            child: Showcase(
+              key: _bingoButtonKey,
+              description: "Think you have bingo? Press this!",
+              child: ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.redAccent,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 48,
+                    vertical: 16,
                   ),
-                  onPressed: () =>
-                      _confirmBingo(context, ref, card.id, data.match.id),
-                  icon: const Icon(Icons.star, color: Colors.yellow, size: 28),
-                  label: const Text("BINGO!"),
+                  textStyle: const TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 1.2,
+                  ),
+                  elevation: 6,
+                  shape: const StadiumBorder(),
+                  // Makes it pill-shaped
+                  shadowColor: Colors.red.withOpacity(0.5),
                 ),
+                onPressed: () =>
+                    _confirmBingo(context, ref, card.id, match.id),
+                icon: const Icon(Icons.star, color: Colors.yellow, size: 28),
+                label: const Text("BINGO!"),
               ),
             ),
           ),
-          // 3. The Last Called Bar pinned at the very bottom of the screen
-          Showcase(
-            key: _lastCalledKey,
-            description:
-                "Latest number appears here briefly. Want history? You can view it by watching an ad.",
-            child: LastCalledBar(visibilitySeconds: 10, matchId: data.match.id),
-          ),
-        ],
-      ),
+        ),
+        // 3. The Last Called Bar pinned at the very bottom of the screen
+        Showcase(
+          key: _lastCalledKey,
+          description:
+              "Latest number appears here briefly. Want history? You can view it by watching an ad.",
+          child: LastCalledBar(visibilitySeconds: 10, matchId: match.id),
+        ),
+      ],
     );
   }
 
   // --- MASTER VIEW ---
-  Widget _buildMasterView(BuildContext context, MatchContext data) {
+  Widget _buildMasterView(BuildContext context, MatchContext? data) {
     final eventsAsync = ref.watch(eventProvider);
-
+    if (data == null) throw AppError(message: "MatchContext not found");
+    final match = data.match;
+    if (match == null) throw AppError(message: "Match not found");
     return Column(
       children: [
         Showcase(
@@ -327,7 +404,7 @@ class _CardPageState extends ConsumerState<CardPage> {
                     "Create events here. Enable auto-call to instantly call a number when created.",
                 child: FloatingActionButton.small(
                   onPressed: () =>
-                      _openEventDialog(context, ref, data.match.id),
+                      _openEventDialog(context, ref, match.id),
                   child: const Icon(Icons.add),
                 ),
               ),
@@ -336,7 +413,12 @@ class _CardPageState extends ConsumerState<CardPage> {
         ),
 
         Expanded(
-          child: eventsAsync.when(
+          child: AsyncValueView(
+            value: eventsAsync,
+            onRetry: () {
+              ref.invalidate(eventProvider);
+            },
+
             data: (events) {
               final events = _isTutorial
                   ? EventModel.mockList()
@@ -404,7 +486,7 @@ class _CardPageState extends ConsumerState<CardPage> {
                               onPressed: () => _openEventDialog(
                                 context,
                                 ref,
-                                data.match.id,
+                                match.id,
                                 event,
                               ),
                             ),
@@ -425,8 +507,6 @@ class _CardPageState extends ConsumerState<CardPage> {
                 },
               );
             },
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (e, _) => Center(child: Text("Events Error: $e")),
           ),
         ),
       ],
@@ -442,25 +522,38 @@ void _confirmBingo(
 ) {
   showDialog(
     context: context,
-    builder: (context) => AlertDialog(
+    builder: (dialogContext) => AlertDialog(
       title: const Text("Call Bingo?"),
       content: const Text(
         "Are you sure? A false Bingo might have consequences!",
       ),
       actions: [
         TextButton(
-          onPressed: () => Navigator.pop(context),
+          onPressed: () => Navigator.pop(dialogContext),
           child: const Text("Wait!"),
         ),
         ElevatedButton(
           onPressed: () async {
-            Navigator.pop(context); // Close confirm
-            // Perform Call
-            final result = await ref
-                .read(matchServiceProvider)
-                .callBingo(cardId, matchId);
+            // 1. Close the confirmation dialog using its own context
+            Navigator.pop(dialogContext);
 
-            _showResultDialog(context, result);
+            try {
+              // 2. Perform the network call
+              final result = await ref
+                  .read(matchServiceProvider)
+                  .callBingo(cardId, matchId);
+
+              // 3. IMPORTANT: Check if the CardPage is still visible/mounted
+              // before trying to show the result dialog.
+              if (!context.mounted) return;
+
+              _showResultDialog(context, result);
+            } catch (e) {
+              // Handle potential errors from the bingo call itself
+              if (context.mounted && e is AppError) {
+                showAppError(context, e);
+              }
+            }
           },
           child: const Text("YES, BINGO!"),
         ),
@@ -602,18 +695,23 @@ void _openEventDialog(
         ElevatedButton(
           onPressed: () {
             final notifier = ref.read(eventProvider.notifier);
-
-            if (event == null) {
-              notifier.createEvent({
-                "name": nameController.text,
-                "description": descController.text,
-                "autoCall": autoCall,
-              });
-            } else {
-              notifier.updateEvent(event.id, {
-                "name": nameController.text,
-                "description": descController.text,
-              });
+            try {
+              if (event == null) {
+                notifier.createEvent({
+                  "name": nameController.text,
+                  "description": descController.text,
+                  "autoCall": autoCall,
+                });
+              } else {
+                notifier.updateEvent(event.id, {
+                  "name": nameController.text,
+                  "description": descController.text,
+                });
+              }
+            } catch (e) {
+              if (context.mounted && e is AppError) {
+                showAppError(context, e);
+              }
             }
 
             Navigator.pop(context);

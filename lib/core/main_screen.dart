@@ -11,13 +11,17 @@ import '../shared/widgets/main_navigation.dart';
 import '../shared/widgets/themed_background.dart';
 
 class MainScreen extends ConsumerStatefulWidget {
+
+class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
 
   @override
   ConsumerState<MainScreen> createState() => _MainScreenState();
+  State<MainScreen> createState() => MainScreenState();
 }
 
 class _MainScreenState extends ConsumerState<MainScreen> {
+class MainScreenState extends State<MainScreen> {
   int currentIndex = 1;
 
   @override
@@ -66,8 +70,12 @@ class _MainScreenState extends ConsumerState<MainScreen> {
       body: ThemedBackground(child: pages[currentIndex]),
       bottomNavigationBar: MainNavigation(
         currentIndex: currentIndex,
-        onTap: (index) => setState(() => currentIndex = index),
+        onTap: goToTab,
       ),
     );
+  }
+
+  void goToTab(int index) {
+    setState(() => currentIndex = index);
   }
 }

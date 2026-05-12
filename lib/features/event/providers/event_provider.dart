@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 
+import '../../../core/network/api_client.dart';
 import '../../../core/network/api_client_provider.dart';
 import '../../match/providers/match_provider.dart';
 import '../data/event_model.dart';
@@ -29,7 +30,10 @@ class EventNotifier extends AsyncNotifier<List<EventModel>> {
     // 👇 get match from your existing provider
     final matchContext = await ref.watch(currentMatchProvider.future);
 
-    matchId = matchContext.match.id;
+    if (matchContext == null) throw AppError(message: "MatchContext not found");
+    final match = matchContext.match;
+    if (match == null) throw AppError(message: "Match not found");
+    matchId = match.id;
 
     return ref.read(eventServiceProvider).getEvents(matchId);
   }
