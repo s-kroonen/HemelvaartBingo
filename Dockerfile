@@ -5,12 +5,14 @@ RUN apt-get update && apt-get install -y \
     curl git unzip xz-utils zip libglu1-mesa ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Flutter ONCE (cached layer)
-RUN git clone https://github.com/flutter/flutter.git /flutter
+# Install Flutter (cached layer)
+RUN mkdir -p /flutter \
+    && git clone https://github.com/flutter/flutter.git /flutter --depth=1 --branch stable
+
 ENV PATH="/flutter/bin:/flutter/bin/cache/dart-sdk/bin:${PATH}"
 
-RUN flutter config --enable-web
-RUN flutter doctor
+# Disable analytics to avoid root issues with Xcode dependency cycle
+RUN flutter config --no-analytics
 
 # ---------- DEPENDENCIES (cached pub get) ----------
 FROM base AS deps
@@ -28,12 +30,19 @@ FROM base AS build
 
 WORKDIR /app
 
+# 👇 Copy Flutter SDK from base stage
+COPY --from=base /flutter /flutter
+
+ENV PATH="/flutter/bin:/flutter/bin/cache/dart-sdk/bin:${PATH}"
+
 # 👇 Reuse cached pub packages
 COPY --from=deps /root/.pub-cache /root/.pub-cache
 COPY --from=deps /app/.dart_tool /app/.dart_tool
 
 # 👇 Now copy the rest of your app
 COPY . .
+
+RUN flutter config --enable-web
 
 ARG API_BASE_URL
 
