@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hemelvaartbingo/services/notification.manager.dart';
 
+import '../../core/network/api_client.dart';
 import '../../shared/providers/theme_provider.dart';
 import '../../shared/widgets/async_value_view.dart';
 import '../match/data/match_models.dart';
@@ -482,16 +483,20 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 
   Future<void> _selectMatch(String matchId) async {
-    try {
-      await ref.read(userServiceProvider).updateCurrentMatch(matchId);
-      ref.invalidate(currentMatchProvider);
+    await ref.read(currentMatchProvider.notifier).updateMatch(matchId);
+    if (!mounted) return;
+
+    final error = ref.read(currentMatchProvider).error;
+    if (error == null) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text("Active Match Switched!")));
-    } catch (e) {
+      ).showSnackBar(const SnackBar(content: Text('Active Match Switched!')));
+    } else if (error is AppError) {
+      showAppError(context, error);
+    } else {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text("Selection failed: $e")));
+      ).showSnackBar(const SnackBar(content: Text('Selection failed.')));
     }
   }
 }

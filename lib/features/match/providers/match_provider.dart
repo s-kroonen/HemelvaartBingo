@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/network/api_client_provider.dart';
+import '../../card/providers/card_provider.dart';
 import '../../invites/data/invite_model.dart';
 import '../../user/providers/user_provider.dart';
 import '../data/match_service.dart';
@@ -15,9 +16,9 @@ final matchServiceProvider = Provider<MatchService>((ref) {
 class CurrentMatchNotifier extends AsyncNotifier<MatchContext?> {
   @override
   Future<MatchContext?> build() async {
-    // return ref.read(matchServiceProvider).fetchCurrentMatchContext();
     try {
-      return ref.read(matchServiceProvider).fetchCurrentMatchContext();
+      // Awaited so a 404 (no current match) lands in the catch below.
+      return await ref.read(matchServiceProvider).fetchCurrentMatchContext();
     } on AppError catch (e) {
       if (e.statusCode == 404) {
         return MatchContext(
@@ -39,6 +40,8 @@ class CurrentMatchNotifier extends AsyncNotifier<MatchContext?> {
       // 2. Fetch the new context
       return ref.read(matchServiceProvider).fetchMatchContext(matchId);
     });
+    // The card belongs to the current match, so load the card of the new match.
+    if (!state.hasError) ref.invalidate(currentCardProvider);
   }
 }
 
