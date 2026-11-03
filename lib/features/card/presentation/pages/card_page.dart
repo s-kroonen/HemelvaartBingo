@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:hemelvaartbingo/core/main_screen.dart';
 import 'package:hemelvaartbingo/features/user/data/user_model.dart';
 import '../../../../core/network/api_client.dart';
 import '../../../../core/network/socket_provider.dart';
@@ -192,7 +191,6 @@ class _CardPageState extends ConsumerState<CardPage> {
       });
     });
 
-    final router = ref.read(routerProvider);
     return Scaffold(
       appBar: AppBar(title: const Text("Game Session"), centerTitle: true),
       body: LayoutBuilder(
@@ -663,7 +661,7 @@ void _openEventDialog(
   final descController = TextEditingController(text: event?.description ?? '');
   final manualNumbersController = TextEditingController(
     text: (event?.manualNumbers ?? []).isNotEmpty
-        ? (event!.manualNumbers!.join(', '))
+        ? (event!.manualNumbers.join(', '))
         : '',
   );
 
@@ -850,7 +848,7 @@ void _openEventDialog(
                         "manualNumbers": manualNumbers,
                     });
                   } else {
-                    notifier.updateEvent(event!.id, {
+                    notifier.updateEvent(event.id, {
                       "name": nameController.text.trim(),
                       "description": descController.text.trim(),
                       // Send null explicitly to clear if field was emptied
