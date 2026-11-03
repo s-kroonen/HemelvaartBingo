@@ -1,0 +1,182 @@
+name: CI
+
+# Checks every change before it can reach dev or main.
+# Stages: security -> quality (analyze, test, build) -> image build -> one result job.
+# Deploy workflows call this with `workflow_call`, so nothing deploys without passing it.
+on:
+  pull_request:
+    branches: [dev, main]
+  workflow_call:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}-${{ github.event_name }}
+  cancel-in-progress: true
+
+env:
+  # Keep in sync with FLUTTER_VERSION in the Dockerfile.
+  FLUTTER_VERSION: '3.47.9'
+
+jobs:
+  # ── Stage 1: security ──────────────────────────────────────────────
+  secrets-scan:
+    name: Secret scan (gitleaks)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - name: Scan full git history
+        run: >
+          docker run --rm -v "$PWD:/repo:ro" -w /repo ghcr.io/gitleaks/gitleaks:v8.30.1
+          git . --config .gitleaks.toml --redact --no-banner --exit-code 1
+
+  dependencies:
+    name: Dependency audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: OSV scan of pubspec.lock (known vulnerabilities)
+        run: >
+          docker run --rm -v "$PWD:/src:ro" ghcr.io/google/osv-scanner:v2.3.1
+          scan source --lockfile /src/pubspec.lock
+      - name: Review dependency changes in this PR
+        if: github.event_name == 'pull_request'
+        uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
+        with:
+          fail-on-severity: high
+
+  # ── Stage 2: quality ───────────────────────────────────────────────
+  analyze:
+    name: Analyze
+    needs: [secrets-scan, dependencies]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          cache: true
+      # Fails if pubspec.lock doesn't match pubspec.yaml for this SDK.
+      - run: flutter pub get --enforce-lockfile
+      # Errors and warnings fail the build; infos are reported only (cleanup in HEM-51).
+      - run: flutter analyze --no-fatal-infos
+
+  test:
+    name: Tests
+    needs: [secrets-scan, dependencies]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          cache: true
+      - run: flutter pub get --enforce-lockfile
+      # The repo has no test/ directory until the test baseline lands (HEM-105).
+      # integration_test/ needs a device and is not run here.
+      - name: flutter test
+        run: |
+          if [ -d test ]; then
+            flutter test --coverage
+          else
+            echo "::notice::No test/ directory yet (HEM-105); skipping unit tests."
+          fi
+      - name: Upload coverage
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: coverage
+          path: coverage
+          if-no-files-found: ignore
+          retention-days: 7
+
+  build:
+    name: Build web
+    needs: [secrets-scan, dependencies]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          cache: true
+      - run: flutter pub get --enforce-lockfile
+      # Verification build without API_BASE_URL (falls back to the default API).
+      # Environment-specific builds for the published images come with HEM-55.
+      - run: flutter build web --release
+      - name: Upload build output
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: web-build
+          path: build/web
+          if-no-files-found: error
+          retention-days: 7
+
+  # ── Stage 3: image and analysis ────────────────────────────────────
+  image:
+    name: Docker image
+    needs: [analyze, test, build]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      # Builds the production image as the server does, without pushing.
+      # Publishing to GHCR is done after merge (HEM-55).
+      - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          push: false
+          cache-from: type=gha,scope=web
+          cache-to: type=gha,mode=max,scope=web
+
+  # Informational: not part of the CI result, so a SonarCloud outage can't block merges.
+  sonar:
+    name: SonarCloud
+    needs: [test]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - name: Download coverage
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        continue-on-error: true
+        with:
+          name: coverage
+          path: coverage
+      - name: SonarCloud scan
+        if: env.SONAR_TOKEN != ''
+        uses: SonarSource/sonarqube-scan-action@e805d875275f728fac1885b413934be6d7c63f65 # v8.4.1
+
+  # ── Result ─────────────────────────────────────────────────────────
+  # The single required status check for branch rulesets (HEM-113).
+  result:
+    name: CI result
+    if: always()
+    needs: [secrets-scan, dependencies, analyze, test, build, image]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: All required jobs passed
+        env:
+          RESULTS: ${{ toJSON(needs) }}
+        run: |
+          echo "$RESULTS" | jq -r 'to_entries[] | "\(.key): \(.value.result)"'
+          failed=$(echo "$RESULTS" | jq -r '[to_entries[] | select(.value.result != "success")] | length')
+          if [ "$failed" -ne 0 ]; then
+            echo "::error::$failed job(s) did not succeed."
+            exit 1
+          fi

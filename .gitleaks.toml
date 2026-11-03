@@ -1,0 +1,25 @@
+# Secret scanning config for CI (gitleaks). Extends the default rules.
+[extend]
+useDefault = true
+
+# Firebase client config (API keys in firebase_options.dart, google-services.json and the
+# messaging service worker) is public: it ships inside every app build and access is
+# controlled by Firebase rules. Only Firebase-format keys in these files are allowed.
+[[allowlists]]
+description = "Firebase client API keys"
+targetRules = ["gcp-api-key", "generic-api-key"]
+condition = "AND"
+paths = [
+  '''^lib/firebase_options\.dart$''',
+  '''^android/app/google-services\.json$''',
+  '''^web/firebase-messaging-sw\.js$''',
+]
+regexes = ['''AIza[0-9A-Za-z_\-]{35}''']
+
+# The FCM web push VAPID key passed to getToken() is the public half of the key pair;
+# browsers receive it by design.
+[[allowlists]]
+description = "FCM web push public VAPID key"
+targetRules = ["generic-api-key"]
+regexTarget = "line"
+regexes = ['''vapidKey\s*:''']
