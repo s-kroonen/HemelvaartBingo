@@ -52,6 +52,7 @@ class DemoUserProvider extends AsyncNotifier<UserModel> {
       roles: ["user"],
       awards: [],
       settings: UserSettings(
+        notificationsEnabled: true,
         emailNotifications: true,
         newsletter: false,
         testerProgram: false,
@@ -71,12 +72,14 @@ class DemoEventNotifier extends EventNotifier {
         name: "This happened",
         called: true,
         numbers: [5, 10],
+        manualNumbers: [],
       ),
       EventModel(
         id: "2",
         name: "This didn't happen yet",
         called: false,
         numbers: [],
+        manualNumbers: [],
       ),
     ];
   }
@@ -130,6 +133,7 @@ void main() {
                 roles: [],
                 awards: [],
                 settings: UserSettings(
+                  notificationsEnabled: true,
                   emailNotifications: true,
                   newsletter: false,
                   testerProgram: false,
