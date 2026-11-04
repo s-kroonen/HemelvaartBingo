@@ -10,26 +10,17 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # Every deploy runs the full CI first; the deploy only starts when it passes.
+  ci:
+    name: CI
+    uses: ./.github/workflows/ci.yml
+    secrets: inherit
+
   build-and-deploy:
+    needs: [ci]
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      # ✅ Install Flutter (cached = fast after first run)
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          channel: stable
-
-      - name: Install dependencies
-        run: flutter pub get
-
-      # ✅ Build check (THIS is the important part)
-      - name: Build Flutter Web (validation)
-        run: flutter build web --release --dart-define=API_BASE_URL=https://dummy.url
-
       # 🚀 Only runs if build succeeded
       - name: Trigger Portainer Webhook
         run: curl -X POST "${{ secrets.PORTAINER_WEBHOOK_URL }}"

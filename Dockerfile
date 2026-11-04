@@ -5,9 +5,11 @@ RUN apt-get update && apt-get install -y \
     curl git unzip xz-utils zip libglu1-mesa ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Flutter (cached layer)
+# Install Flutter (cached layer). Same version as CI (.github/workflows/ci.yml) so the
+# image is built with the SDK the checks ran on.
+ARG FLUTTER_VERSION=3.47.9
 RUN mkdir -p /flutter \
-    && git clone https://github.com/flutter/flutter.git /flutter --depth=1 --branch stable
+    && git clone https://github.com/flutter/flutter.git /flutter --depth=1 --branch ${FLUTTER_VERSION}
 
 ENV PATH="/flutter/bin:/flutter/bin/cache/dart-sdk/bin:${PATH}"
 

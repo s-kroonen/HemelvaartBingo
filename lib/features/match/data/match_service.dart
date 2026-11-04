@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import '../../../core/network/api_client.dart';
 import '../../invites/data/invite_model.dart';
 import 'match_models.dart';
 
@@ -13,16 +14,20 @@ class MatchService {
     return (response.data as List).map((m) => MatchModel.fromJson(m)).toList();
   }
 
-  // Fetch the specific context (Match + Role)
-  Future<MatchContext> fetchMatchContext(String matchId) async {
-    final response = await _dio.get('/matches/$matchId');
-    return MatchContext.fromJson(response.data);
+  // Fetch the context (match + my role) for a specific match.
+  Future<MatchContext> fetchMatchContext(String matchId) {
+    return safeRequest(() async {
+      final response = await _dio.get('/matches/context/$matchId');
+      return MatchContext.fromJson(response.data);
+    });
   }
 
   // Get the current active match context
-  Future<MatchContext> fetchCurrentMatchContext() async {
-    final response = await _dio.get('/matches/context');
-    return MatchContext.fromJson(response.data);
+  Future<MatchContext> fetchCurrentMatchContext() {
+    return safeRequest(() async {
+      final response = await _dio.get('/matches/context');
+      return MatchContext.fromJson(response.data);
+    });
   }
 
   Future<void> updateMatch(String matchId, Map<String, dynamic> map) async {

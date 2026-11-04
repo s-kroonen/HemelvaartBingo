@@ -1,7 +1,5 @@
 // lib/features/card/data/card_models.dart
 
-import 'package:flutter/material.dart';
-
 class CellModel {
   final String id;
   final String value;
