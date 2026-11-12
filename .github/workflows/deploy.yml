@@ -1,13 +1,15 @@
-name: Build & Deploy Flutter Web
+name: Deploy
 
 on:
   push:
-    branches: [main]
+    branches: [main, dev]
   workflow_dispatch:
 
 concurrency:
-  group: deploy-main
-  cancel-in-progress: true
+  group: deploy-${{ github.ref }}
+  # dev never cancels a run that is waiting on a deploy: the deploy goes on in the orchestrator
+  # and the next push would only be refused as busy. main keeps cancelling for now.
+  cancel-in-progress: ${{ github.ref != 'refs/heads/dev' }}
 
 jobs:
   # Every deploy runs the full CI first; the deploy only starts when it passes.
@@ -16,12 +18,91 @@ jobs:
     uses: ./.github/workflows/ci.yml
     secrets: inherit
 
-  build-and-deploy:
+  # ================================
+  # DEPLOY
+  # ================================
+  deploy-dev:
+    # Through the Homelab Orchestrator: probes before, the images of the last 3 versions
+    # kept, probes again after. The job fails with the orchestrator's reason.
+    name: Deploy dev (orchestrator)
     needs: [ci]
     runs-on: ubuntu-latest
-
+    timeout-minutes: 40
+    if: github.ref == 'refs/heads/dev' && github.event_name == 'push'
+    permissions:
+      contents: read
+    environment:
+      name: dev
+      url: https://devbingoapp.kroon-en.nl
     steps:
-      # 🚀 Only runs if build succeeded
+      - name: Deploy hemelvaart-bingo-flutter-dev through the orchestrator
+        env:
+          DEPLOY_URL: https://orchestrator.kroon-en.nl/hooks/deploy/hemelvaart-bingo-flutter-dev
+          DEPLOY_KEY: ${{ secrets.DEPLOY_KEY_HEMELVAART_BINGO_FLUTTER_DEV }}
+          REF: ${{ github.ref }}
+          SHA: ${{ github.sha }}
+          ACTOR: ${{ github.actor }}
+        run: |
+          set -u
+          fail() { echo "::error title=Deploy of hemelvaart-bingo-flutter-dev failed::$1"; exit 1; }
+
+          [ -n "${DEPLOY_KEY:-}" ] || fail "The key is empty: add the secret DEPLOY_KEY_HEMELVAART_BINGO_FLUTTER_DEV to the dev environment."
+          body=$(jq -nc --arg ref "$REF" --arg sha "$SHA" --arg pusher "$ACTOR" '{ref: $ref, sha: $sha, pusher: $pusher}')
+
+          # 1. Ask the orchestrator to deploy.
+          code=$(curl -sS -o resp.json -w '%{http_code}' --max-time 30 -X POST "$DEPLOY_URL" \
+            -H "Authorization: Bearer $DEPLOY_KEY" -H 'X-Deploy-Source: github-actions' \
+            -H 'Content-Type: application/json' -d "$body") \
+            || fail "Could not reach the orchestrator at $DEPLOY_URL (down, wrong URL, or not reachable from this runner)."
+          why=$(jq -r '.detail // empty' resp.json 2>/dev/null || true)
+          case "$code" in
+            202) ;;
+            401) fail "The orchestrator rejected the key (401). DEPLOY_KEY_HEMELVAART_BINGO_FLUTTER_DEV must be this service's current key; it changes when the key is replaced." ;;
+            404) fail "The orchestrator has no deploy webhook for hemelvaart-bingo-flutter-dev (404): switch the webhook on for this service." ;;
+            409) fail "The orchestrator refused to deploy (409): ${why:-busy or deploys switched off}" ;;
+            423) fail "hemelvaart-bingo-flutter-dev is switched off in the orchestrator (423): switch it on first." ;;
+            5??) fail "The orchestrator failed ($code): ${why:-$(head -c 300 resp.json)}" ;;
+            *)   fail "Unexpected answer $code from the orchestrator: $(head -c 300 resp.json)" ;;
+          esac
+          if [ "$(jq -r '.started' resp.json)" != "true" ]; then
+            echo "Nothing to deploy: $(jq -r '.ignored // "acknowledged"' resp.json)"
+            exit 0
+          fi
+          run=$(jq -r '.run_id' resp.json)
+          echo "Deploy run #$run started."
+
+          # 2. Wait for the result; the guards and health checks take a while.
+          bad=0; waited=0
+          while [ "$waited" -lt 1800 ]; do
+            sleep 10; waited=$((waited + 10))
+            if ! code=$(curl -sS -o run.json -w '%{http_code}' --max-time 20 \
+                -H "Authorization: Bearer $DEPLOY_KEY" "$DEPLOY_URL/runs/$run"); then
+              code=000
+            fi
+            if [ "$code" != 200 ]; then
+              bad=$((bad + 1))
+              [ "$bad" -lt 6 ] && { echo "Status check answered $code ($bad/6), retrying."; continue; }
+              fail "Lost contact with the orchestrator while the deploy ran (last answer $code). Check run #$run there."
+            fi
+            bad=0
+            case "$(jq -r '.status' run.json)" in
+              running)   echo "  still running: $(jq -r '[.steps[]?.name] | last // "starting"' run.json)" ;;
+              succeeded) echo "Deployed and healthy."; exit 0 ;;
+              skipped)   fail "Blocked before anything changed: $(jq -r '.error // "a guard said no"' run.json)" ;;
+              *)         fail "The deploy failed: $(jq -r --arg run "$run" '.error // "see run #\($run) in the orchestrator"' run.json). Failed steps: $(jq -r '[.steps[]? | select(.status == "failed") | .name + (if .message != "" then " (" + .message + ")" else "" end)] | join("; ")' run.json)" ;;
+            esac
+          done
+          fail "Gave up waiting after 30 minutes. The deploy (run #$run) may still be running in the orchestrator."
+
+  deploy-prod:
+    name: Deploy to Portainer Prod
+    needs: [ci]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    # Deploy secrets live in this Environment; it only allows `main` and waits for approval.
+    environment:
+      name: production
+    steps:
       - name: Trigger Portainer Webhook
         run: curl -X POST "${{ secrets.PORTAINER_WEBHOOK_URL }}"
 
@@ -33,10 +114,10 @@ jobs:
           for i in {1..5}; do
             STATUS=$(curl -s -o /dev/null -w "%{http_code}" "${{ secrets.DEPLOY_HEALTHCHECK_URL }}")
             if [ "$STATUS" = "200" ]; then
-              echo "✅ Service is healthy"
+              echo "Service is healthy"
               exit 0
             fi
             sleep 10
           done
-          echo "❌ Service failed health check"
+          echo "Service failed health check"
           exit 1
